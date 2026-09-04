@@ -2,19 +2,11 @@
 
 Turn Kindle books into PDFs, from a terminal interface or a single command.
 
-```
-                     _____    __                     ______
-  ____ ______      _|__  /   / /_____     ____  ____/ / __/
- / __ `/_  / | /| / //_ <   / __/ __ \   / __ \/ __  / /_
-/ /_/ / / /| |/ |/ /__/ /  / /_/ /_/ /  / /_/ / /_/ / __/
-\__,_/ /___/__/|__/____/   \__/\____/  / .___/\__,_/_/
-                                      /_/
-```
+<img src="azw3-to-pdf.jpg" style="max-width:800px;" alt="banner">
 
-`azw3-to-pdf` reads `.azw3`, `.azw`, `.mobi` and `.prc` files and lays them out
-as PDFs. Everything is built in: the MOBI/KF8 parser, the layout engine and the
-PDF writer are all part of the binary. There is no Calibre, no Python, no
-Ghostscript and nothing else to install.
+`azw3-to-pdf` reads `.azw3`, `.azw`, `.mobi` and `.prc` files and lays them out as PDFs.  
+Everything is built in: the MOBI/KF8 parser, the layout engine and the PDF writer are all part of the binary.  
+There is no Calibre, no Python, no Ghostscript and nothing else to install.
 
 - **A file browser in the terminal.** Run it with no arguments and pick a book.
 - **Batch conversion.** Select several books, or point it at a folder.
