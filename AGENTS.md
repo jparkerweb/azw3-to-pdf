@@ -124,6 +124,22 @@ with a non-blocking send, so a slow terminal never slows the converter down.
 - **A screen**: a model in `internal/tui/screens`, a `messages.Screen`
   constant, registration in `NewApp`, and footer and help entries in `app.go`.
 
+## Local skills
+
+`.claude/skills/` holds the repeatable workflows for this repo. Prefer them
+over improvising the same steps:
+
+| Skill | Use it for |
+|-------|-----------|
+| `azw3-to-pdf-release` | Cutting a version: changelog, commit, tag, push, watch the pipeline |
+| `azw3-to-pdf-update-docs` | Auditing README, AGENTS.md, the changelog and the skills against the code |
+| `azw3-to-pdf-verify-output` | Converting a real book and looking at the rendered pages |
+| `azw3-to-pdf-add-preset` | Adding or changing a layout preset or page size |
+
+`settings.local.json` turns off gitignore filtering so that sample books and
+generated PDFs, which are gitignored on purpose, can still be found when
+testing.
+
 ## Releases
 
 `CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
