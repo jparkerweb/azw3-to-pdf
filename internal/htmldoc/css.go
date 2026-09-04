@@ -17,6 +17,7 @@ type Props struct {
 	Mono       bool
 	Block      bool // display:block on an otherwise inline element
 	MarginLeft float64
+	PadRight   float64 // padding or margin on the right, in em
 	Indent     float64 // text-indent, negative for a hanging indent
 	BreakStart bool    // page-break-before: always
 	BreakEnd   bool    // page-break-after: always
@@ -41,6 +42,9 @@ func (p Props) merge(other Props) Props {
 	out.BreakEnd = out.BreakEnd || other.BreakEnd
 	if other.MarginLeft != 0 {
 		out.MarginLeft = other.MarginLeft
+	}
+	if other.PadRight != 0 {
+		out.PadRight = other.PadRight
 	}
 	if other.Indent != 0 {
 		out.Indent = other.Indent
@@ -188,6 +192,10 @@ func parseDeclarations(body string) Props {
 		case "margin-left", "padding-left":
 			if v, ok := parseLength(value); ok {
 				p.MarginLeft = v
+			}
+		case "margin-right", "padding-right":
+			if v, ok := parseLength(value); ok {
+				p.PadRight = v
 			}
 		case "text-indent":
 			if v, ok := parseLength(value); ok {

@@ -182,3 +182,25 @@ func TestParseWithCSSPageBreak(t *testing.T) {
 		t.Errorf("expected a page break before the chapter, got %#v", doc.Blocks)
 	}
 }
+
+func TestParseInlinePaddingBecomesASpace(t *testing.T) {
+	// Numbered lists in Kindle books put the number in a padded span rather
+	// than writing a space, so the padding has to stand in for one.
+	sheet := ParseCSS(`span.num { padding-right: 0.35em; padding-left: 0.35em; }`)
+	doc := ParseWithCSS(`<p><span class="num">7.</span>Remove the lid.</p>`, sheet)
+
+	if len(doc.Blocks) != 1 {
+		t.Fatalf("parsed %d blocks, want 1", len(doc.Blocks))
+	}
+	if got := doc.Blocks[0].Text(); got != "7. Remove the lid." {
+		t.Errorf("block text is %q, want \"7. Remove the lid.\"", got)
+	}
+}
+
+func TestParseDoesNotDoubleSpaces(t *testing.T) {
+	sheet := ParseCSS(`span.num { padding-right: 0.5em; }`)
+	doc := ParseWithCSS(`<p><span class="num">7.</span> Already spaced.</p>`, sheet)
+	if got := doc.Blocks[0].Text(); got != "7. Already spaced." {
+		t.Errorf("block text is %q", got)
+	}
+}

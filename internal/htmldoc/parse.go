@@ -39,17 +39,22 @@ type parser struct {
 	style Style
 	link  string
 
-	seenHTML bool
+	// pendingSpace records that an inline element's padding stands in for a
+	// space, which is how list numbers and run-in labels are separated from
+	// the text that follows them.
+	pendingSpace bool
+	seenHTML     bool
 }
 
 // frame records what an open element contributed, so the end tag can undo it.
 type frame struct {
-	name     string
-	style    Style
-	link     bool
-	block    bool
-	skip     bool
-	breakEnd bool
+	name       string
+	style      Style
+	link       bool
+	block      bool
+	skip       bool
+	breakEnd   bool
+	spaceAfter bool
 }
 
 func (p *parser) run(markup string) {
@@ -166,6 +171,14 @@ func (p *parser) start(t html.Token) {
 		}
 	}
 
+	if !isBlock {
+		// Horizontal padding on an inline element reads as a gap.
+		if props.MarginLeft > 0 {
+			p.pendingSpace = true
+		}
+		f.spaceAfter = props.PadRight > 0
+	}
+
 	if s := inlineStyle(name, attrs) | props.style(); s != 0 {
 		f.style = s &^ p.style // only what this element actually adds
 		p.style |= s
@@ -216,6 +229,9 @@ func (p *parser) end(name string) {
 		if f.block {
 			p.flush()
 		}
+		if f.spaceAfter {
+			p.pendingSpace = true
+		}
 		if f.breakEnd {
 			p.emitBreak()
 		}
@@ -259,6 +275,13 @@ func (p *parser) appendSpan(sp Span) {
 	}
 	// Never start a block with whitespace, and never double it up.
 	if sp.Text != LineBreak {
+		if p.pendingSpace {
+			p.pendingSpace = false
+			if len(p.cur.Spans) > 0 && !strings.HasPrefix(sp.Text, " ") &&
+				!strings.HasSuffix(lastText(p.cur.Spans), " ") {
+				sp.Text = " " + sp.Text
+			}
+		}
 		if len(p.cur.Spans) == 0 || strings.HasSuffix(lastText(p.cur.Spans), " ") {
 			sp.Text = strings.TrimLeft(sp.Text, " ")
 			if sp.Text == "" {
@@ -284,6 +307,7 @@ func (p *parser) flush() {
 	b := p.cur
 	p.cur = Block{}
 	p.curOpen = false
+	p.pendingSpace = false
 
 	// Trim trailing whitespace and stray breaks.
 	for len(b.Spans) > 0 {
