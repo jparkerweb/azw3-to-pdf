@@ -44,10 +44,9 @@ func (m SplashModel) Init() tea.Cmd {
 
 // Update advances past the splash on a key press or when the timer fires.
 func (m SplashModel) Update(msg tea.Msg) (style.ScreenModel, tea.Cmd) {
-	switch msg.(type) {
+	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		size := msg.(tea.WindowSizeMsg)
-		m.width, m.height = size.Width, size.Height
+		m.width, m.height = msg.Width, msg.Height
 		return m, nil
 	case splashDoneMsg, tea.KeyPressMsg:
 		return m, goTo(messages.ScreenFilePicker)

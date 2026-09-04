@@ -1,39 +1,41 @@
-BINARY := azw3-to-pdf
-PKG    := ./cmd/azw3-to-pdf
+BINARY_NAME := azw3-to-pdf
+VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
+DATE := $(shell date -u '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || echo "unknown")
+LDFLAGS := -ldflags "-s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)"
 
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
-COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
-DATE    ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-
-LDFLAGS := -s -w \
-	-X main.version=$(VERSION) \
-	-X main.commit=$(COMMIT) \
-	-X main.date=$(DATE)
-
-.PHONY: build test lint fmt run clean install tidy
+.PHONY: build run test lint fmt ci install tidy clean snapshot release-check
 
 build:
-	go build -ldflags "$(LDFLAGS)" -o $(BINARY) $(PKG)
+	CGO_ENABLED=0 go build $(LDFLAGS) -o $(BINARY_NAME) ./cmd/azw3-to-pdf/
 
-install:
-	go install -ldflags "$(LDFLAGS)" $(PKG)
+run: build
+	./$(BINARY_NAME)
 
 test:
 	go test ./...
 
 lint:
-	go vet ./...
-	@test -z "$$(gofmt -l .)" || (echo "gofmt needed:"; gofmt -l .; exit 1)
+	golangci-lint run ./...
 
 fmt:
 	gofmt -w .
 
-run: build
-	./$(BINARY)
+ci: lint test build
+
+install:
+	go install $(LDFLAGS) ./cmd/azw3-to-pdf/
 
 tidy:
 	go mod tidy
 
 clean:
-	rm -f $(BINARY) $(BINARY).exe
-	rm -rf dist
+	rm -f $(BINARY_NAME)
+	rm -f $(BINARY_NAME).exe
+	rm -rf dist/
+
+snapshot:
+	goreleaser build --snapshot --clean
+
+release-check:
+	goreleaser check

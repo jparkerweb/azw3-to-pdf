@@ -30,7 +30,7 @@ func probeCmd() *cobra.Command {
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 			row := func(label, value string) {
 				if value != "" {
-					fmt.Fprintf(w, "%s\t%s\n", label, value)
+					_, _ = fmt.Fprintf(w, "%s\t%s\n", label, value)
 				}
 			}
 			row("Title", book.Title)

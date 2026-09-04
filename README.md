@@ -175,10 +175,16 @@ PDF of noise. Convert books you own in an unencrypted form.
 
 ```sh
 make build     # build ./azw3-to-pdf
-make test      # run the tests
-make lint      # go vet and gofmt
+make test      # go test ./...
+make lint      # golangci-lint run ./...
+make ci        # lint, test and build, as CI does
 make run       # build and open the interface
+make snapshot  # cross-platform build with goreleaser
 ```
+
+Releases are cut by pushing a tag: `git tag v0.1.0 && git push origin v0.1.0`
+runs the tests and then publishes binaries for Linux, macOS and Windows on both
+amd64 and arm64 through GoReleaser.
 
 The code is laid out in stages, each of which can be read on its own:
 

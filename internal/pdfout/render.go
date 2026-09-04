@@ -444,7 +444,6 @@ func (r *renderer) layout(spans []htmldoc.Span, size float64, in indent, align h
 		next += wd.width
 		if len(line) > 0 && next > width {
 			flush(false)
-			next = wd.width
 		}
 		if len(line) > 0 {
 			lineWidth += line[len(line)-1].space

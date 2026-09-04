@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 version: 2
 
 project_name: azw3-to-pdf
@@ -8,10 +9,15 @@ before:
 
 builds:
   - id: azw3-to-pdf
-    main: ./cmd/azw3-to-pdf
+    main: ./cmd/azw3-to-pdf/
     binary: azw3-to-pdf
     env:
       - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
     goos:
       - linux
       - darwin
@@ -19,34 +25,50 @@ builds:
     goarch:
       - amd64
       - arm64
-    ldflags:
-      - -s -w
-      - -X main.version={{.Version}}
-      - -X main.commit={{.Commit}}
-      - -X main.date={{.Date}}
 
 archives:
-  - formats: [tar.gz]
+  - id: default
+    formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
     format_overrides:
       - goos: windows
         formats: [zip]
-    name_template: >-
-      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
     files:
+      - LICENSE*
       - README.md
-      - LICENSE
 
 checksum:
-  name_template: checksums.txt
+  name_template: "checksums.txt"
+  algorithm: sha256
 
 changelog:
   sort: asc
+  use: github
   filters:
     exclude:
       - "^docs:"
       - "^test:"
-      - "^chore:"
+      - "^chore\\(deps\\):"
+      - "^Merge pull request"
+      - "^Merge branch"
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Performance
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: Other
+      order: 999
 
 release:
+  github:
+    owner: jparkerweb
+    name: azw3-to-pdf
   draft: false
   prerelease: auto
+  name_template: "v{{.Version}}"

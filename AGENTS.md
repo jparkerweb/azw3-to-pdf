@@ -14,13 +14,25 @@ adding one would defeat the point of the project.
 ```sh
 make build     # build ./azw3-to-pdf
 make test      # go test ./...
-make lint      # go vet plus a gofmt check
+make lint      # golangci-lint run ./...
+make ci        # lint, test and build, exactly what CI does
 make run       # build and open the terminal interface
 make fmt       # gofmt -w .
+make snapshot  # cross-platform build with goreleaser
 ```
 
-CI runs build and test on Linux, macOS and Windows, and vet plus gofmt on
-Linux. Keep `gofmt -l .` empty.
+`.github/workflows/ci.yml` runs golangci-lint, `go test -race` with a coverage
+artifact, and a build that executes `azw3-to-pdf version` to prove the binary
+works. All three must be green before a pull request merges, so run `make ci`
+first. golangci-lint runs on its defaults, with no configuration file.
+
+`.github/workflows/release.yml` fires on a `v*` tag: it runs the tests and then
+GoReleaser, which publishes archives for Linux, macOS and Windows on amd64 and
+arm64 with the version, commit and date compiled in. Release notes are grouped
+from conventional commit prefixes, so `feat:`, `fix:` and `perf:` messages land
+in the right section of the changelog.
+
+Go is pinned to 1.25 in both workflows and in `go.mod`; keep them in step.
 
 ## Architecture
 

@@ -17,9 +17,9 @@ func presetsCmd() *cobra.Command {
 		Short: "List the layout presets",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-			fmt.Fprintln(w, "KEY\tNAME\tLAYOUT")
+			_, _ = fmt.Fprintln(w, "KEY\tNAME\tLAYOUT")
 			for _, p := range presets.All() {
-				fmt.Fprintf(w, "%s\t%s\t%s\n", p.Key, p.Name, p.Summary())
+				_, _ = fmt.Fprintf(w, "%s\t%s\t%s\n", p.Key, p.Name, p.Summary())
 			}
 			if err := w.Flush(); err != nil {
 				return err
@@ -39,9 +39,9 @@ func pageSizesCmd() *cobra.Command {
 		Short: "List the built-in page sizes",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-			fmt.Fprintln(w, "NAME\tDESCRIPTION\tPOINTS")
+			_, _ = fmt.Fprintln(w, "NAME\tDESCRIPTION\tPOINTS")
 			for _, s := range pdfout.PageSizes() {
-				fmt.Fprintf(w, "%s\t%s\t%.0f x %.0f\n", s.Name, s.Label, s.Width, s.Height)
+				_, _ = fmt.Fprintf(w, "%s\t%s\t%.0f x %.0f\n", s.Name, s.Label, s.Width, s.Height)
 			}
 			if err := w.Flush(); err != nil {
 				return err

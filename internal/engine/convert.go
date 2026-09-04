@@ -120,8 +120,8 @@ func Convert(ctx context.Context, opts Options, onProgress func(Progress)) (*Res
 	}
 	tmpName := tmp.Name()
 	defer func() {
-		tmp.Close()
-		os.Remove(tmpName)
+		_ = tmp.Close()
+		_ = os.Remove(tmpName)
 	}()
 
 	meta := pdfout.Meta{

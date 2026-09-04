@@ -60,9 +60,8 @@ func (f *faces) fill() {
 
 // candidate is one system font family, listed by file name across platforms.
 type candidate struct {
-	name    string
-	files   [4]string // regular, bold, italic, bold-italic
-	dirHint string
+	name  string
+	files [4]string // regular, bold, italic, bold-italic
 }
 
 func systemFontDirs() []string {
