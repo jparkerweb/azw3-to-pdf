@@ -1,0 +1,23 @@
+# Binaries
+/azw3-to-pdf
+/azw3-to-pdf.exe
+/dist/
+/bin/
+
+# Scratch
+/tmpdump/
+*.pdf
+*.azw3
+*.mobi
+*.azw
+
+# Go
+*.test
+*.out
+coverage.*
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
