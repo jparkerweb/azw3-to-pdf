@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="en" data-theme="ink">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>azw3-to-pdf &middot; Kindle books, laid out as PDFs</title>
+<meta name="description" content="A single Go binary that turns .azw3, .azw, .mobi and .prc files into real PDFs. The MOBI/KF8 parser, the layout engine and the PDF writer are all built in. No Calibre, no Python, nothing else to install.">
+<meta name="color-scheme" content="dark light">
+<link rel="canonical" href="https://jparkerweb.github.io/azw3-to-pdf/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="azw3-to-pdf &middot; Kindle books, laid out as PDFs">
+<meta property="og:description" content="A single Go binary that turns .azw3, .azw, .mobi and .prc files into real PDFs. No Calibre, no Python, nothing else to install.">
+<meta property="og:image" content="https://jparkerweb.github.io/azw3-to-pdf/azw3-to-pdf.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,600;0,700;1,400&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap">
+<style>
+/* ---- Midnight Ink: the terminal interface's default theme, lifted from
+       internal/tui/style/theme.go ------------------------------------- */
+:root {
+  --bg:        #12121c;
+  --surface:   #1b1b29;
+  --surface-2: #232336;
+  --hair:      #2e2e44;
+  --border:    #4a4a63;
+  --text:      #e6e6f0;
+  --dim:       #9a9ab5;
+  --muted:     #6b6b85;
+  --primary:   #8b7bf7;
+  --secondary: #f0a868;
+  --accent:    #5ed3d3;
+  --success:   #7bd88f;
+  --warning:   #f0c674;
+  --error:     #f07178;
+  --glow-a:    rgba(139, 123, 247, .20);
+  --glow-b:    rgba(240, 168, 104, .10);
+  --on-primary:#1a1526;
+  --shadow:    0 24px 60px -28px rgba(0,0,0,.85);
+}
+/* ---- Paper Sepia: the light companion, same source file ------------- */
+[data-theme="sepia"] {
+  --bg:        #f6efe2;
+  --surface:   #efe6d8;
+  --surface-2: #e8ddca;
+  --hair:      #ddceb4;
+  --border:    #b9a88f;
+  --text:      #2e2820;
+  --dim:       #6b6155;
+  --muted:     #8a7b6b;
+  --primary:   #8c5a3c;
+  --secondary: #b07d48;
+  --accent:    #4f7a6f;
+  --success:   #4f7a4f;
+  --warning:   #b08948;
+  --error:     #a64b4b;
+  --glow-a:    rgba(140, 90, 60, .12);
+  --glow-b:    rgba(176, 125, 72, .10);
+  --on-primary:#f6efe2;
+  --shadow:    0 20px 44px -26px rgba(70,52,32,.45);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Spectral, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  font-size: 17px;
+  line-height: 1.65;
+  text-wrap: pretty;
+  transition: background-color .35s ease, color .35s ease;
+}
+
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { color: var(--secondary); }
+
+code, kbd, pre, .mono {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-feature-settings: "liga" 0;
+}
+
+h1, h2, h3 { font-weight: 600; line-height: 1.15; margin: 0; text-wrap: balance; }
+
+/* ---- shell ---------------------------------------------------------- */
+.wrap { width: min(1080px, 100% - 3rem); margin-inline: auto; }
+section { padding-block: clamp(4rem, 9vw, 7.5rem); }
+.rule { border: 0; border-top: 1px solid var(--hair); margin: 0; }
+
+.eyebrow {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .7rem;
+  font-weight: 500;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+}
+.eyebrow::after { content: ""; flex: 1; height: 1px; background: var(--hair); }
+
+h2.head { font-size: clamp(1.75rem, 3.6vw, 2.6rem); letter-spacing: -.015em; }
+.lede { color: var(--dim); font-size: 1.08rem; max-width: 62ch; margin: 1rem 0 0; }
+
+/* ---- theme switch, mirroring ctrl+t in the interface ---------------- */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  backdrop-filter: blur(10px);
+  background: color-mix(in oklab, var(--bg) 82%, transparent);
+  border-bottom: 1px solid var(--hair);
+}
+.topbar-inner { display: flex; align-items: center; gap: 1rem; padding-block: .7rem; }
+.brand {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-weight: 700; font-size: .9rem; letter-spacing: -.02em;
+  color: var(--text); text-decoration: none;
+}
+.brand span { color: var(--primary); }
+.topbar nav { margin-left: auto; display: flex; align-items: center; gap: 1.4rem; }
+.topbar nav a {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .78rem; color: var(--dim); text-decoration: none;
+}
+.topbar nav a:hover { color: var(--text); }
+@media (max-width: 700px) { .topbar nav a.hide-sm { display: none; } .topbar nav { gap: 1rem; } }
+
+.themeswitch {
+  display: inline-flex; align-items: center; gap: .5rem;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .72rem; color: var(--dim);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 999px; padding: .3rem .3rem .3rem .75rem;
+  cursor: pointer; transition: border-color .2s ease, color .2s ease;
+}
+.themeswitch:hover { border-color: var(--primary); color: var(--text); }
+.themeswitch .kbd {
+  border: 1px solid var(--border); border-radius: 5px;
+  padding: .1rem .4rem; color: var(--accent); background: var(--bg);
+}
+
+/* ---- hero ----------------------------------------------------------- */
+.hero { position: relative; overflow: hidden; padding-block: clamp(3.5rem, 8vw, 6.5rem) 0; }
+.hero::before {
+  content: ""; position: absolute; inset: -30% -10% auto -10%; height: 70vh;
+  background:
+    radial-gradient(48% 55% at 50% 0%, var(--glow-a), transparent 70%),
+    radial-gradient(38% 40% at 78% 30%, var(--glow-b), transparent 72%);
+  pointer-events: none;
+}
+.hero > * { position: relative; }
+
+.wordmark { overflow-x: auto; scrollbar-width: none; }
+.wordmark::-webkit-scrollbar { display: none; }
+.wordmark pre {
+  margin: 0;
+  font-size: clamp(7px, 2.2vw, 17px);
+  line-height: 1.22;
+  font-weight: 700;
+  color: var(--primary);
+  white-space: pre;
+}
+
+.tagline {
+  font-size: clamp(1.9rem, 4.4vw, 3.1rem);
+  font-weight: 300;
+  letter-spacing: -.02em;
+  margin: 2rem 0 0;
+  max-width: 20ch;
+}
+.tagline em { font-style: italic; color: var(--secondary); }
+
+.hero p.lede { font-size: 1.15rem; margin-top: 1.4rem; }
+
+.cta { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-top: 2.4rem; }
+
+.install {
+  display: flex; align-items: center; gap: .9rem;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: .7rem .7rem .7rem 1rem;
+  max-width: 100%; overflow: hidden;
+}
+.install code {
+  font-size: .82rem; color: var(--text); white-space: nowrap;
+  overflow-x: auto; scrollbar-width: none;
+}
+.install code::-webkit-scrollbar { display: none; }
+.install code .p { color: var(--accent); }
+.copy {
+  flex: none;
+  font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .72rem;
+  background: var(--surface-2); color: var(--dim);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: .35rem .6rem; cursor: pointer;
+  transition: color .2s ease, border-color .2s ease;
+}
+.copy:hover { color: var(--text); border-color: var(--primary); }
+.copy[data-done="1"] { color: var(--success); border-color: var(--success); }
+
+.btn {
+  display: inline-flex; align-items: center; gap: .5rem;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .82rem; font-weight: 500; text-decoration: none;
+  padding: .8rem 1.2rem; border-radius: 10px;
+  border: 1px solid transparent;
+  transition: transform .15s ease, background-color .2s ease, border-color .2s ease;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn-primary { background: var(--primary); color: var(--on-primary); }
+.btn-primary:hover { color: var(--on-primary); background: color-mix(in oklab, var(--primary) 88%, white); }
+.btn-ghost { border-color: var(--border); color: var(--dim); }
+.btn-ghost:hover { color: var(--text); border-color: var(--primary); }
+
+.facts {
+  display: flex; flex-wrap: wrap; gap: .5rem 1.6rem;
+  margin-top: 2.2rem;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .76rem; color: var(--muted);
+}
+.facts b { color: var(--secondary); font-weight: 500; }
+
+/* ---- banner plate: stays dark in both themes, it is a lit object ----- */
+.plate { margin-top: clamp(3rem, 6vw, 4.5rem); background: #10101a; border-block: 1px solid var(--hair); }
+.plate img {
+  display: block; width: 100%; height: auto; max-height: 340px; object-fit: cover;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+          mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+
+/* ---- pipeline ------------------------------------------------------- */
+.pipe { display: grid; gap: .75rem; margin-top: 2.8rem; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (max-width: 860px) { .pipe { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 460px) { .pipe { grid-template-columns: 1fr; } }
+.stage {
+  background: var(--surface); border: 1px solid var(--hair);
+  border-radius: 10px; padding: 1rem .9rem;
+  display: flex; flex-direction: column; gap: .45rem;
+}
+.stage .n {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .68rem; color: var(--muted); letter-spacing: .05em;
+}
+.stage .t {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .82rem; font-weight: 500; color: var(--primary);
+}
+.stage .d { font-size: .88rem; color: var(--dim); line-height: 1.45; }
+.stage.first .t, .stage.last .t { color: var(--secondary); }
+
+/* ---- feature cards -------------------------------------------------- */
+.cards { display: grid; gap: 1px; margin-top: 3rem; background: var(--hair);
+         border: 1px solid var(--hair); border-radius: 12px; overflow: hidden;
+         grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 900px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .cards { grid-template-columns: 1fr; } }
+.card { background: var(--bg); padding: 1.9rem 1.6rem; display: flex; flex-direction: column; gap: .7rem; }
+.card svg { color: var(--accent); }
+.card h3 { font-size: 1.12rem; font-weight: 600; }
+.card p { margin: 0; color: var(--dim); font-size: .95rem; line-height: 1.55; }
+.card code { font-size: .82em; color: var(--secondary); }
+
+/* ---- terminal recreation -------------------------------------------- */
+.term {
+  margin-top: 2.8rem; border: 1px solid var(--border); border-radius: 12px;
+  overflow: hidden; box-shadow: var(--shadow); background: var(--bg);
+}
+.term-bar {
+  background: var(--primary); color: var(--on-primary);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .74rem; font-weight: 700; padding: .45rem .9rem;
+  display: flex; gap: .9rem; align-items: center;
+}
+.term-bar .right { margin-left: auto; font-weight: 400; opacity: .75; }
+.term-body { overflow-x: auto; padding: 1.3rem 1.1rem; }
+.term-body pre {
+  margin: 0; font-size: .8rem; line-height: 1.62; white-space: pre;
+  color: var(--text);
+}
+.term-foot {
+  background: var(--surface-2); color: var(--muted);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .72rem; padding: .45rem .9rem;
+}
+.c-title  { color: var(--primary); font-weight: 700; }
+.c-sel    { color: var(--secondary); font-weight: 700; }
+.c-val    { color: var(--text); font-weight: 700; }
+.c-muted  { color: var(--muted); }
+.c-accent { color: var(--accent); }
+.c-badge  { background: var(--primary); color: var(--on-primary); font-weight: 700; padding: 0 .4em; border-radius: 3px; }
+
+/* ---- code blocks ---------------------------------------------------- */
+.snips { display: grid; gap: 1.1rem; margin-top: 2.4rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 760px) { .snips { grid-template-columns: 1fr; } }
+.snip { background: var(--surface); border: 1px solid var(--hair); border-radius: 10px; padding: 1.1rem 1.2rem; }
+.snip .lbl { font-size: .93rem; color: var(--dim); margin: 0 0 .7rem; }
+.snip pre { margin: 0; overflow-x: auto; font-size: .78rem; line-height: 1.6; color: var(--text); }
+.snip pre .f { color: var(--accent); }
+
+/* ---- tables --------------------------------------------------------- */
+.tablewrap { overflow-x: auto; margin-top: 2.4rem; border: 1px solid var(--hair); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; }
+th, td { text-align: left; padding: .85rem 1.1rem; border-bottom: 1px solid var(--hair); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+thead th {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .68rem; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--muted); font-weight: 500; background: var(--surface);
+}
+td.key { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .82rem; color: var(--secondary); white-space: nowrap; }
+td.name { font-weight: 600; white-space: nowrap; }
+td .spec { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .72rem; color: var(--muted); display: block; margin-top: .2rem; font-weight: 400; }
+td.desc { color: var(--dim); font-size: .95rem; }
+tbody tr:hover td { background: color-mix(in oklab, var(--surface) 60%, transparent); }
+
+/* ---- limits --------------------------------------------------------- */
+.limits { display: grid; gap: 1.2rem; margin-top: 2.4rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 700px) { .limits { grid-template-columns: 1fr; } }
+.limit {
+  border: 1px solid var(--hair); border-left: 2px solid var(--warning);
+  border-radius: 4px 10px 10px 4px; padding: 1.2rem 1.4rem; background: var(--surface);
+}
+.limit h3 { font-size: 1rem; margin-bottom: .5rem; }
+.limit p { margin: 0; color: var(--dim); font-size: .93rem; line-height: 1.55; }
+
+/* ---- closing + footer ----------------------------------------------- */
+.closing { text-align: center; }
+.closing h2 { font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 300; letter-spacing: -.02em; }
+.closing .cta { justify-content: center; }
+.closing .install { margin-inline: auto; }
+
+footer { border-top: 1px solid var(--hair); padding-block: 2.6rem 3.4rem; }
+.foot {
+  display: flex; flex-wrap: wrap; gap: 1rem 2rem; align-items: center;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: .74rem; color: var(--muted);
+}
+.foot a { color: var(--dim); text-decoration: none; }
+.foot a:hover { color: var(--text); }
+.foot .sp { margin-left: auto; }
+@media (max-width: 700px) { .foot .sp { margin-left: 0; } }
+
+/* ---- one orchestrated reveal ---------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  .rise { opacity: 0; transform: translateY(14px); animation: rise .7s cubic-bezier(.22,.7,.3,1) forwards; }
+  .rise:nth-child(1) { animation-delay: .05s; }
+  .rise:nth-child(2) { animation-delay: .14s; }
+  .rise:nth-child(3) { animation-delay: .23s; }
+  .rise:nth-child(4) { animation-delay: .32s; }
+  .rise:nth-child(5) { animation-delay: .41s; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="#top">azw3<span>-to-</span>pdf</a>
+    <nav>
+      <a href="#how" class="hide-sm">How it works</a>
+      <a href="#presets" class="hide-sm">Presets</a>
+      <a href="#formats" class="hide-sm">Formats</a>
+      <a href="https://github.com/jparkerweb/azw3-to-pdf">GitHub</a>
+      <button class="themeswitch" id="themeswitch" type="button">
+        <span id="themename">Paper Sepia</span><span class="kbd">ctrl+t</span>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ================= hero ================= -->
+  <div class="hero">
+    <div class="wrap">
+      <div class="wordmark rise"><pre aria-label="azw3 to pdf">                     _____    __                     ______
+  ____ ______      _|__  /   / /_____     ____  ____/ / __/
+ / __ '/_  / | /| / //_ &lt;   / __/ __ \   / __ \/ __  / /_
+/ /_/ / / /| |/ |/ /__/ /  / /_/ /_/ /  / /_/ / /_/ / __/
+\__,_/ /___/__/|__/____/   \__/\____/  / .___/\__,_/_/
+                                      /_/</pre></div>
+
+      <h1 class="tagline rise">Kindle books, laid out as <em>PDFs</em>.</h1>
+
+      <p class="lede rise">One Go binary reads <code>.azw3</code>, <code>.azw</code>, <code>.mobi</code>
+      and <code>.prc</code> and lays them out as real PDFs: selectable text, outline bookmarks from the
+      book's own headings, the cover, the illustrations, the typography its stylesheet asked for.
+      No Calibre. No Python. No Ghostscript. Nothing else to install.</p>
+
+      <div class="cta rise">
+        <div class="install">
+          <code><span class="p">go install</span> github.com/jparkerweb/azw3-to-pdf/cmd/azw3-to-pdf@latest</code>
+          <button class="copy" type="button">copy</button>
+        </div>
+        <a class="btn btn-ghost" href="https://github.com/jparkerweb/azw3-to-pdf/releases">Download a build</a>
+      </div>
+
+      <p class="facts rise">
+        <span><b>4</b> input formats</span>
+        <span><b>8</b> layout presets</span>
+        <span><b>12</b> page sizes</span>
+        <span><b>0</b> runtime dependencies</span>
+        <span><b>MIT</b> licensed</span>
+      </p>
+    </div>
+
+    <div class="plate">
+      <img src="azw3-to-pdf.jpg" alt="Kindle book formats being converted into PDF documents" width="1440" height="428">
+    </div>
+  </div>
+
+  <!-- ================= how ================= -->
+  <section id="how">
+    <div class="wrap">
+      <p class="eyebrow">Everything is in the binary</p>
+      <h2 class="head">A converter, not a wrapper around one.</h2>
+      <p class="lede">Most Kindle-to-PDF tools shell out to Calibre and hope it is installed. This one
+      carries the whole pipeline: the Palm container reader, the MOBI/KF8 parser, both decompressors,
+      the markup and CSS layout engine and the PDF writer. Five stages, one file, nothing to set up
+      before the first conversion.</p>
+
+      <div class="pipe">
+        <div class="stage first">
+          <span class="n">input</span>
+          <span class="t">file bytes</span>
+          <span class="d">.azw3, .azw, .mobi or .prc</span>
+        </div>
+        <div class="stage">
+          <span class="n">stage 1</span>
+          <span class="t">ebook</span>
+          <span class="d">Palm container, MOBI/KF8 headers, PalmDOC and HUFF/CDIC decompression, resources</span>
+        </div>
+        <div class="stage">
+          <span class="n">stage 2</span>
+          <span class="t">htmldoc</span>
+          <span class="d">The book's markup and its own stylesheet, flattened into layout blocks</span>
+        </div>
+        <div class="stage">
+          <span class="n">stage 3</span>
+          <span class="t">pdfout</span>
+          <span class="d">Wrapping, justification, fonts, illustrations, bookmarks, page numbers</span>
+        </div>
+        <div class="stage last">
+          <span class="n">output</span>
+          <span class="t">a real PDF</span>
+          <span class="d">Selectable text and a working outline</span>
+        </div>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4" width="19" height="16" rx="2"/><path d="M6.5 9.5l3 2.5-3 2.5M12.5 15h5"/></svg>
+          <h3>A file browser in the terminal</h3>
+          <p>Run it with no arguments and pick a book. Multi-select with <code>space</code>, convert the
+          batch with <code>b</code>, type a path with <code>tab</code>, switch drives with <code>d</code>.</p>
+        </div>
+        <div class="card">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8.5 4.5L12 12 3.5 7.5 12 3z"/><path d="M3.5 12L12 16.5 20.5 12"/><path d="M3.5 16.5L12 21l8.5-4.5"/></svg>
+          <h3>Batch conversion</h3>
+          <p>Point it at a folder, add <code>--recursive</code>, and run several conversions at once with
+          <code>--jobs 4</code>. Existing files can be overwritten, renamed or skipped.</p>
+        </div>
+        <div class="card">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v16M12 4v16M19 4v16"/><circle cx="5" cy="9" r="2"/><circle cx="12" cy="15" r="2"/><circle cx="19" cy="7.5" r="2"/></svg>
+          <h3>Presets first, knobs after</h3>
+          <p>Eight named starting points, from <code>ereader</code> to <code>manuscript</code>, plus a
+          suggestion based on how long and how illustrated the book is. Every setting can be overridden.</p>
+        </div>
+        <div class="card">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 016.5 3H20v15H6.5A2.5 2.5 0 004 20.5z"/><path d="M4 20.5A2.5 2.5 0 016.5 18H20v3H6.5A2.5 2.5 0 014 20.5z"/><path d="M8 7.5h8M8 11h5"/></svg>
+          <h3>The book's own typography</h3>
+          <p>Kindle books style their headings with CSS classes, not heading tags. The stylesheet is read,
+          so chapter titles look like chapter titles and hanging indents survive the trip.</p>
+        </div>
+        <div class="card">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 16.5h4"/></svg>
+          <h3>PDFs, not pictures of pages</h3>
+          <p>Selectable, searchable text. An outline built from the headings, page numbers, an optional
+          running header, the cover art, a generated title page and document metadata.</p>
+        </div>
+        <div class="card">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-3.6 7-9V6l-7-3-7 3v6c0 5.4 7 9 7 9z"/><path d="M9.2 12l2 2 3.6-3.8"/></svg>
+          <h3>Fonts that cannot fail</h3>
+          <p>A system serif, sans or mono face where one exists, or your own <code>.ttf</code>. If nothing
+          suitable is installed, typefaces embedded in the binary take over.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- ================= the interface ================= -->
+  <section id="interface">
+    <div class="wrap">
+      <p class="eyebrow">The interface</p>
+      <h2 class="head">Answer four questions, get a PDF.</h2>
+      <p class="lede">Pick a book, look at what is inside it, choose how the pages should read, watch it
+      convert. Two colour themes, switchable mid-run with <code>ctrl+t</code> and remembered next time.
+      Or skip the whole thing with <code>--no-tui</code> and pass flags.</p>
+
+      <div class="term">
+        <div class="term-bar"><span>azw3-to-pdf</span><span class="right">presets</span></div>
+        <div class="term-body"><pre><span class="c-title">How should the pages look?</span>
+
+  <span class="c-val">E-reader</span>
+    <span class="c-muted">A5 (148 x 210 mm) &middot; serif 11.0pt &middot; 14mm margins &middot; justified</span>
+
+  <span class="c-val">Paperback</span>       <span class="c-badge">suggested</span>
+    <span class="c-muted">Trade paperback (6 x 9 in) &middot; serif 11.5pt &middot; 18mm margins &middot; justified</span>
+
+<span class="c-sel">&gt; Print</span>
+    <span class="c-muted">US Letter (8.5 x 11 in) &middot; serif 11.5pt &middot; 22mm margins &middot; justified</span>
+    <span class="c-accent">US Letter with generous margins, sized for printing and annotating.</span>
+
+  <span class="c-val">Compact</span>
+    <span class="c-muted">A5 (148 x 210 mm) &middot; serif 9.5pt &middot; 9mm margins &middot; justified</span>
+
+  <span class="c-val">Large print</span>
+    <span class="c-muted">A4 (210 x 297 mm) &middot; sans 16.0pt &middot; 18mm margins &middot; ragged right</span>
+
+<span class="c-accent">enter</span><span class="c-muted"> use this layout    </span><span class="c-accent">r</span><span class="c-muted"> jump to the suggestion</span></pre></div>
+        <div class="term-foot">l layout &nbsp;&middot;&nbsp; p presets &nbsp;&middot;&nbsp; ctrl+t theme &nbsp;&middot;&nbsp; ? shortcuts &nbsp;&middot;&nbsp; ctrl+c quit</div>
+      </div>
+
+      <div class="snips">
+        <div class="snip">
+          <p class="lbl">Convert one book from the shell</p>
+          <pre>azw3-to-pdf book.azw3 <span class="f">--no-tui</span></pre>
+        </div>
+        <div class="snip">
+          <p class="lbl">A whole folder, four at a time</p>
+          <pre>azw3-to-pdf ~/Books <span class="f">--recursive --no-tui</span> \
+  <span class="f">--output-dir</span> ~/PDFs <span class="f">--jobs</span> 4</pre>
+        </div>
+        <div class="snip">
+          <p class="lbl">Look inside a book without converting it</p>
+          <pre>azw3-to-pdf probe book.azw3 <span class="f">--verbose</span></pre>
+        </div>
+        <div class="snip">
+          <p class="lbl">A preset, then your own measurements</p>
+          <pre>azw3-to-pdf book.azw3 <span class="f">--no-tui</span> \
+  <span class="f">--preset</span> paperback <span class="f">--page-size</span> 120x160mm \
+  <span class="f">--font-size</span> 12 <span class="f">--line-spacing</span> 1.5</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- ================= presets ================= -->
+  <section id="presets">
+    <div class="wrap">
+      <p class="eyebrow">Presets</p>
+      <h2 class="head">Eight ways to read the same book.</h2>
+      <p class="lede">A preset sets the page size, margins, typeface, text size, leading and justification
+      in one go. <code>azw3-to-pdf presets</code> prints the list; any part of it can be overridden on the
+      command line or in <code>config.yaml</code>.</p>
+
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr><th>Key</th><th>Preset</th><th>Layout</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="key">ereader</td><td class="name">E-reader<span class="spec">the default</span></td><td class="desc">A5, 11 pt serif, 14 mm margins, justified. The best all-round reading layout.</td></tr>
+            <tr><td class="key">paperback</td><td class="name">Paperback</td><td class="desc">Trade 6 &times; 9 in with book margins and a running header. Looks like a printed novel.</td></tr>
+            <tr><td class="key">print</td><td class="name">Print</td><td class="desc">US Letter with generous margins, sized for printing and annotating.</td></tr>
+            <tr><td class="key">a4</td><td class="name">A4</td><td class="desc">A4 with standard margins, for everywhere that is not the US.</td></tr>
+            <tr><td class="key">compact</td><td class="name">Compact</td><td class="desc">Small type and thin margins. Roughly a third fewer pages.</td></tr>
+            <tr><td class="key">large-print</td><td class="name">Large print</td><td class="desc">A4, 16 pt sans and open leading for comfortable reading.</td></tr>
+            <tr><td class="key">phone</td><td class="name">Phone</td><td class="desc">A narrow page that fills a phone screen without pinch-zooming.</td></tr>
+            <tr><td class="key">manuscript</td><td class="name">Manuscript</td><td class="desc">Double-spaced Letter pages for editing and mark-up.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- ================= formats ================= -->
+  <section id="formats">
+    <div class="wrap">
+      <p class="eyebrow">What it understands</p>
+      <h2 class="head">The awkward parts, handled.</h2>
+      <p class="lede">A Kindle file is a Palm database from the 1990s wrapped around HTML, compressed with
+      a Huffman scheme that has to be decoded in 64-bit arithmetic or it yields plausible-looking nonsense.
+      All of that is dealt with before the layout engine sees a word.</p>
+
+      <div class="tablewrap">
+        <table>
+          <tbody>
+            <tr><td class="name">Containers</td><td class="desc">Palm database: <code>.azw3</code>, <code>.azw</code>, <code>.mobi</code>, <code>.prc</code></td></tr>
+            <tr><td class="name">Formats</td><td class="desc">KF8 (MOBI 8) and MOBI 6, including dual-format files where both halves are present</td></tr>
+            <tr><td class="name">Compression</td><td class="desc">None, PalmDOC (LZ77) and HUFF/CDIC</td></tr>
+            <tr><td class="name">Text</td><td class="desc">UTF-8 and Windows-1252</td></tr>
+            <tr><td class="name">Images</td><td class="desc">JPEG, PNG, GIF and BMP, plus the cover art</td></tr>
+            <tr><td class="name">Styling</td><td class="desc">The book's own stylesheet: alignment, relative font sizes, margins, hanging indents and page breaks</td></tr>
+            <tr><td class="name">Platforms</td><td class="desc">Windows, macOS and Linux, on amd64 and arm64</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="limits">
+        <div class="limit">
+          <h3>DRM is not removed</h3>
+          <p>A book bought from the Kindle store and never de-authorised is encrypted. It says so plainly
+          rather than producing a PDF of noise. Convert books you own, in an unencrypted form.</p>
+        </div>
+        <div class="limit">
+          <h3><code>.kfx</code> is not supported</h3>
+          <p>The newest Kindle format is a different container altogether, and this reads the Palm database
+          family. If your file is <code>.kfx</code>, this is not the tool for it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- ================= closing ================= -->
+  <section class="closing">
+    <div class="wrap">
+      <h2>Point it at a book.</h2>
+      <p class="lede" style="margin-inline:auto">Go 1.25, or a prebuilt binary for your platform. Nothing else.</p>
+      <div class="cta">
+        <div class="install">
+          <code><span class="p">go install</span> github.com/jparkerweb/azw3-to-pdf/cmd/azw3-to-pdf@latest</code>
+          <button class="copy" type="button">copy</button>
+        </div>
+        <a class="btn btn-primary" href="https://github.com/jparkerweb/azw3-to-pdf">View on GitHub</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span>azw3-to-pdf &middot; MIT licence</span>
+    <a href="https://github.com/jparkerweb/azw3-to-pdf">Source</a>
+    <a href="https://github.com/jparkerweb/azw3-to-pdf/releases">Releases</a>
+    <a href="https://github.com/jparkerweb/azw3-to-pdf/blob/main/CHANGELOG.md">Changelog</a>
+    <span class="sp">Built in Go by <a href="https://github.com/jparkerweb">jparkerweb</a></span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var INSTALL = "go install github.com/jparkerweb/azw3-to-pdf/cmd/azw3-to-pdf@latest";
+  var root = document.documentElement;
+  var label = document.getElementById("themename");
+
+  function apply(name) {
+    root.setAttribute("data-theme", name);
+    if (label) label.textContent = name === "ink" ? "Paper Sepia" : "Midnight Ink";
+    try { localStorage.setItem("azw3-theme", name); } catch (e) {}
+  }
+
+  try {
+    var saved = localStorage.getItem("azw3-theme");
+    if (saved === "ink" || saved === "sepia") apply(saved);
+    else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) apply("sepia");
+  } catch (e) {}
+
+  var sw = document.getElementById("themeswitch");
+  if (sw) sw.addEventListener("click", function () {
+    apply(root.getAttribute("data-theme") === "ink" ? "sepia" : "ink");
+  });
+
+  // The copy buttons fall back to selecting the command when the clipboard is
+  // unavailable, which is the case inside a sandboxed frame.
+  Array.prototype.forEach.call(document.querySelectorAll(".copy"), function (btn) {
+    var code = btn.parentNode.querySelector("code");
+    function select() {
+      try {
+        var r = document.createRange();
+        r.selectNodeContents(code);
+        var s = window.getSelection();
+        s.removeAllRanges();
+        s.addRange(r);
+      } catch (e) {}
+    }
+    function done() {
+      btn.textContent = "copied";
+      btn.setAttribute("data-done", "1");
+      setTimeout(function () { btn.textContent = "copy"; btn.removeAttribute("data-done"); }, 1600);
+    }
+    btn.addEventListener("click", function () {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(INSTALL).then(done, select);
+      } else {
+        select();
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>
