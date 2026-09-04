@@ -184,7 +184,8 @@ make snapshot  # cross-platform build with goreleaser
 
 Releases are cut by pushing a tag: `git tag v0.1.0 && git push origin v0.1.0`
 runs the tests and then publishes binaries for Linux, macOS and Windows on both
-amd64 and arm64 through GoReleaser.
+amd64 and arm64 through GoReleaser. See [CHANGELOG.md](CHANGELOG.md) for what
+has changed in each version.
 
 The code is laid out in stages, each of which can be read on its own:
 

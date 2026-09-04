@@ -124,6 +124,19 @@ with a non-blocking send, so a slow terminal never slows the converter down.
 - **A screen**: a model in `internal/tui/screens`, a `messages.Screen`
   constant, registration in `NewApp`, and footer and help entries in `app.go`.
 
+## Releases
+
+`CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
+and semantic versioning, with the newest version at the top under an `Added`,
+`Changed`, `Fixed` or `Removed` heading. Anything a user would notice belongs
+in it before the pull request merges; refactors and test-only changes do not.
+
+Cutting a release is: land the changelog entry with its date, then
+`git tag vX.Y.Z && git push origin vX.Y.Z`. The tag drives everything else, so
+the version in the binary comes from git rather than from a constant in the
+source, and the compare links at the foot of the changelog need the new version
+added.
+
 ## Conventions
 
 - Errors say what the user should do about them, and name the file involved.
