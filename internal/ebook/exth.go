@@ -17,7 +17,6 @@ const (
 	exthISBN         = 104
 	exthSubject      = 105
 	exthPublished    = 106
-	exthContributor  = 108
 	exthRights       = 109
 	exthASIN         = 113
 	exthCoverOffset  = 201
