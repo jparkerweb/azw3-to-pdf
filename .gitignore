@@ -21,3 +21,6 @@ coverage.*
 Thumbs.db
 .idea/
 .vscode/
+
+# Plan2Code specs
+specs/
