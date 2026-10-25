@@ -33,9 +33,10 @@ type Book struct {
 	FileSize    int64
 	TextBytes   int
 
-	// HTML is the book's markup in reading order. Flows holds the auxiliary
-	// KF8 streams (stylesheets and SVG), which the renderer does not lay out
-	// but which are useful for diagnostics.
+	// HTML is the book's markup in reading order. Flows holds the book's CSS,
+	// which the parser applies to that markup: KF8's auxiliary streams, or the
+	// linked and inline stylesheets of an EPUB or HTML file. A KF8 flow can
+	// also hold SVG rather than CSS.
 	HTML  string
 	Flows []string
 

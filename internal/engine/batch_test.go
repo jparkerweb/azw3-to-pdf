@@ -156,6 +156,29 @@ func TestRunBatchStopsStartingAfterCancel(t *testing.T) {
 	}
 }
 
+func TestRunBatchStopFinishesInFlightBooks(t *testing.T) {
+	stop := make(chan struct{})
+	fakeConvert(t, func(ctx context.Context, opts Options, _ func(Progress)) (*Result, error) {
+		if opts.Input == "b" {
+			close(stop)
+			// A graceful stop must leave the running book alone.
+			time.Sleep(20 * time.Millisecond)
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
+		}
+		return &Result{}, nil
+	})
+
+	got := RunBatch(context.Background(), names(5), BatchOptions{Concurrency: 1, Stop: stop})
+	if len(got) != 2 {
+		t.Fatalf("got %d results after stopping during the second book, want 2", len(got))
+	}
+	if got[1].Path != "b" || got[1].Err != nil {
+		t.Errorf("the book running at stop time should finish cleanly, got %q err %v", got[1].Path, got[1].Err)
+	}
+}
+
 func TestRunBatchProgressCarriesTheIndex(t *testing.T) {
 	fakeConvert(t, func(ctx context.Context, opts Options, onProgress func(Progress)) (*Result, error) {
 		if onProgress != nil {

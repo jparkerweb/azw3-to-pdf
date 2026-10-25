@@ -40,7 +40,7 @@ var registry = []Preset{
 	{
 		Key:         "ereader",
 		Name:        "E-reader",
-		Description: "Tablet-sized pages with tight margins. The best all-round reading layout.",
+		Description: "Tight margins and justified serif type. The best all-round reading layout.",
 		PageSize:    "a5", MarginMM: 14, Font: "serif", FontSize: 11, LineSpacing: 1.38,
 		Justify: true, TitlePage: true, PageNumbers: true,
 	},
@@ -55,7 +55,7 @@ var registry = []Preset{
 	{
 		Key:         "print",
 		Name:        "Print",
-		Description: "US Letter with generous margins, sized for printing and annotating.",
+		Description: "Generous margins and a running header, for printing and annotating.",
 		PageSize:    "letter", MarginMM: 22, Font: "serif", FontSize: 11.5, LineSpacing: 1.45,
 		Justify: true, TitlePage: true, PageNumbers: true, RunningHeader: true,
 	},
@@ -92,7 +92,7 @@ var registry = []Preset{
 	{
 		Key:         "manuscript",
 		Name:        "Manuscript",
-		Description: "Double-spaced Letter pages for editing and mark-up.",
+		Description: "Double-spaced pages for editing and mark-up.",
 		PageSize:    "letter", MarginMM: 25, Font: "sans", FontSize: 12, LineSpacing: 2.0,
 		Justify: false, TitlePage: true, PageNumbers: true,
 	},

@@ -17,6 +17,7 @@ import (
 	"github.com/jparkerweb/ebook-to-pdf/internal/engine"
 	"github.com/jparkerweb/ebook-to-pdf/internal/logging"
 	"github.com/jparkerweb/ebook-to-pdf/internal/presets"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 // runHeadless converts books from the shell, printing progress as plain text.
@@ -114,7 +115,7 @@ func reportOne(input string, res *engine.Result, err error) {
 	default:
 		fmt.Printf("+ %s\n", res.OutputPath)
 		fmt.Printf("  %d pages · %d images · %s · %s in %s\n",
-			res.Pages, res.Images, res.Font, humanBytes(res.OutputSize),
+			res.Pages, res.Images, res.Font, style.FormatBytes(res.OutputSize),
 			res.Elapsed.Round(10*time.Millisecond))
 	}
 }
@@ -134,17 +135,4 @@ func dryRun(inputs []string, out engine.OutputOptions, preset presets.Preset, sa
 		}
 	}
 	return nil
-}
-
-func humanBytes(b int64) string {
-	const unit = 1024
-	if b < unit {
-		return fmt.Sprintf("%d B", b)
-	}
-	div, exp := int64(unit), 0
-	for n := b / unit; n >= unit && exp < 3; n /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "KMGT"[exp])
 }

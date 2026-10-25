@@ -337,7 +337,7 @@ func (m FilePickerModel) View() string {
 		b.WriteString("\n")
 
 	default:
-		b.WriteString(style.MutedStyle().Render(style.Truncate(m.picker.CurrentDirectory, maxInt(m.width-4, 20))))
+		b.WriteString(style.MutedStyle().Render(style.Truncate(m.picker.CurrentDirectory, max(m.width-4, 20))))
 		b.WriteString("\n")
 		b.WriteString(m.picker.View())
 		b.WriteString("\n")
@@ -385,11 +385,4 @@ func detectDrives() []string {
 	}
 	sort.Strings(drives)
 	return drives
-}
-
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }

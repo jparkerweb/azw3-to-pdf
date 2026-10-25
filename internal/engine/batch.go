@@ -15,6 +15,11 @@ type BatchOptions struct {
 	// Concurrency is how many books convert at once; anything below 1 means 1.
 	Concurrency int
 
+	// Stop, once closed, keeps any new book from starting while the books
+	// already in flight run to completion. Cancelling ctx aborts those too.
+	// Nil means the batch only stops with ctx.
+	Stop <-chan struct{}
+
 	// OnProgress reports one book's progress. With Concurrency above 1 it is
 	// called from several goroutines, each for a different index, so keep any
 	// per-book state indexed by it. Nil means no progress is wanted.
@@ -38,8 +43,8 @@ var convertFn = Convert
 
 // RunBatch converts paths with up to opts.Concurrency books in flight and
 // returns the books it attempted, in input order. A failure never stops the
-// others. Once ctx is cancelled no new book starts, so a cancelled batch
-// returns fewer results than paths.
+// others. Once ctx is cancelled or opts.Stop is closed no new book starts, so
+// a stopped batch returns fewer results than paths.
 func RunBatch(ctx context.Context, paths []string, opts BatchOptions) []BatchResult {
 	workers := min(max(opts.Concurrency, 1), max(len(paths), 1))
 
@@ -50,11 +55,23 @@ func RunBatch(ctx context.Context, paths []string, opts BatchOptions) []BatchRes
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 
+	stopped := func() bool {
+		if ctx.Err() != nil {
+			return true
+		}
+		select {
+		case <-opts.Stop:
+			return true
+		default:
+			return false
+		}
+	}
+
 	worker := func() {
 		defer wg.Done()
 		for i := range queue {
-			// A book can be handed over just as the context is cancelled.
-			if ctx.Err() != nil {
+			// A book can be handed over just as the batch is stopped.
+			if stopped() {
 				continue
 			}
 			var onProgress func(Progress)
@@ -80,12 +97,14 @@ func RunBatch(ctx context.Context, paths []string, opts BatchOptions) []BatchRes
 	}
 dispatch:
 	for i := range paths {
-		if ctx.Err() != nil {
+		if stopped() {
 			break
 		}
 		select {
 		case queue <- i:
 		case <-ctx.Done():
+			break dispatch
+		case <-opts.Stop:
 			break dispatch
 		}
 	}

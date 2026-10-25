@@ -10,6 +10,7 @@ import (
 
 	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
 	"github.com/jparkerweb/ebook-to-pdf/internal/htmldoc"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 func probeCmd() *cobra.Command {
@@ -47,8 +48,8 @@ func probeCmd() *cobra.Command {
 			}
 			row("Compression", book.Compression)
 			row("Encoding", book.Encoding)
-			row("File size", humanBytes(book.FileSize))
-			row("Text", fmt.Sprintf("%s of markup", humanBytes(int64(book.TextBytes))))
+			row("File size", style.FormatBytes(book.FileSize))
+			row("Text", fmt.Sprintf("%s of markup", style.FormatBytes(int64(book.TextBytes))))
 			row("Stylesheets", fmt.Sprintf("%d", len(book.Flows)))
 			row("Images", fmt.Sprintf("%d embedded", len(book.Resources)))
 			row("Cover", map[bool]string{true: "yes", false: "no"}[book.Cover != nil])

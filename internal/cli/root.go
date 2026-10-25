@@ -5,6 +5,8 @@ package cli
 import (
 	"context"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/charmbracelet/fang"
 	"github.com/spf13/cobra"
@@ -36,8 +38,8 @@ func Execute() error {
 		Short: "Turn ebooks into PDFs.",
 		Long: "ebook-to-pdf converts ebooks into PDFs: EPUB (.epub), Kindle (.azw3, .azw,\n" +
 			".mobi, .prc), comic archives (.cbz), FictionBook (.fb2, .fb2.zip), plain\n" +
-			"text (.txt) and HTML (.html, .htm). Folder scans skip text and HTML files\n" +
-			"unless --include-text is given.\n\n" +
+			"text (.txt) and HTML (.html, .htm, .xhtml). Folder scans skip text and\n" +
+			"HTML files unless --include-text is given.\n\n" +
 			"Run it with no arguments for the interactive browser, or pass files and\n" +
 			"--no-tui to convert straight from the shell. It needs no other software:\n" +
 			"the parser, layout engine and PDF writer are all built in.",
@@ -59,6 +61,8 @@ func Execute() error {
 	root.AddCommand(probeCmd())
 	root.AddCommand(completionCmd())
 
+	applyNoColor(os.Args[1:])
+
 	return fang.Execute(
 		context.Background(),
 		root,
@@ -66,4 +70,26 @@ func Execute() error {
 		fang.WithCommit(commit),
 		fang.WithNotifySignal(os.Interrupt),
 	)
+}
+
+// applyNoColor turns --no-color into NO_COLOR, which fang, lipgloss, the log
+// and the interface all honour when they pick a colour profile. It reads the
+// raw arguments rather than the parsed flag because cobra prints help,
+// --version and flag errors without running any hook.
+func applyNoColor(args []string) {
+	on := false
+	for _, a := range args {
+		if a == "--" {
+			break
+		}
+		if a == "--no-color" {
+			on = true
+		} else if v, ok := strings.CutPrefix(a, "--no-color="); ok {
+			on, _ = strconv.ParseBool(v)
+		}
+	}
+	if on {
+		// Setenv only fails on a malformed name, and this one is constant.
+		_ = os.Setenv("NO_COLOR", "1")
+	}
 }

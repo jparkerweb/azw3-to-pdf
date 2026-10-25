@@ -438,7 +438,7 @@ func (a App) footer() string {
 	if a.viewport.TotalLineCount() > a.viewport.VisibleLineCount() {
 		hints += fmt.Sprintf("  |  PgUp/PgDn %d%%", int(a.viewport.ScrollPercent()*100))
 	}
-	return style.FooterStyle().Width(a.width).Render(style.Truncate(hints, maxInt(a.width-2, 10)))
+	return style.FooterStyle().Width(a.width).Render(style.Truncate(hints, max(a.width-2, 10)))
 }
 
 func (a App) footerHints() string {
@@ -507,11 +507,4 @@ func (a App) screenBindings() [][2]string {
 
 func navigate(screen messages.Screen) tea.Cmd {
 	return func() tea.Msg { return messages.NavigateMsg{Screen: screen} }
-}
-
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }

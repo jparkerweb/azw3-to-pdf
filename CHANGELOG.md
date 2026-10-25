@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The default page size is US Letter. E-reader and Compact were A5 and Large print was A4; Paperback, A4 and Phone keep their own sizes. To get A5 back, choose A5 on the layout screen and press `s`, or set `layout.page_size: a5` in the configuration file
 - Comics and fixed-layout books get one PDF page per book page, with no added cover or title page
 - The promo page moved to `ebook-to-pdf.equilllabs.com`
+- Headless output and `probe` show sizes the way the interface does, for example `312 KB` rather than `312.4 KB`
+
+### Fixed
+- `--no-color` now turns colour off; it was accepted but ignored
+- Pressing esc during a batch in the interface now lets the book being converted finish, as the status line says, instead of abandoning it half written
 
 ## [0.1.1] - 2026-10-25
 
@@ -58,6 +63,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - DRM is not removed. An encrypted book reports that clearly instead of producing a PDF of noise.
 - `.kfx`, the newest Kindle format, is a different container and is not supported.
 
-[Unreleased]: https://github.com/jparkerweb/azw3-to-pdf/compare/v0.1.1...HEAD
-[0.1.1]: https://github.com/jparkerweb/azw3-to-pdf/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/jparkerweb/azw3-to-pdf/releases/tag/v0.1.0
+[Unreleased]: https://github.com/jparkerweb/ebook-to-pdf/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/jparkerweb/ebook-to-pdf/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/jparkerweb/ebook-to-pdf/releases/tag/v0.1.0

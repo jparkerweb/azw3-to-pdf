@@ -84,6 +84,43 @@ func TestBatchStartReportsThroughChannels(t *testing.T) {
 	}
 }
 
+// TestBatchEscStopsAfterTheCurrentBook checks that esc closes the runner's
+// stop signal and leaves the book in flight running, as the status line says.
+func TestBatchEscStopsAfterTheCurrentBook(t *testing.T) {
+	type call struct {
+		ctx  context.Context
+		stop <-chan struct{}
+	}
+	got := make(chan call, 1)
+	orig := runBatch
+	runBatch = func(ctx context.Context, paths []string, opts engine.BatchOptions) []engine.BatchResult {
+		got <- call{ctx, opts.Stop}
+		return nil
+	}
+	t.Cleanup(func() { runBatch = orig })
+
+	m := NewBatchProgressModel()
+	m.Start([]string{"a.azw3", "b.azw3"}, engine.OutputOptions{}, pdfout.DefaultOptions())
+
+	var c call
+	select {
+	case c = <-got:
+	case <-time.After(2 * time.Second):
+		t.Fatal("the batch runner was never called")
+	}
+
+	m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+
+	select {
+	case <-c.stop:
+	default:
+		t.Error("esc did not close the stop signal")
+	}
+	if c.ctx.Err() != nil {
+		t.Error("esc cancelled the context, which aborts the book in flight")
+	}
+}
+
 // TestTypedFolderSkipsText checks that a typed folder follows the CLI scan
 // rule: ebooks are picked up, text and HTML files are not.
 func TestTypedFolderSkipsText(t *testing.T) {

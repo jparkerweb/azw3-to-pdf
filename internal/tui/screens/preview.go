@@ -152,9 +152,9 @@ func (m PreviewModel) View() string {
 	b.WriteString(style.TitleStyle().Render("Ready to convert"))
 	b.WriteString("\n")
 
-	b.WriteString(row("Book", style.Truncate(m.book.Title, maxInt(m.width-18, 20))))
+	b.WriteString(row("Book", style.Truncate(m.book.Title, max(m.width-18, 20))))
 	b.WriteString(row("Author", m.book.AuthorLine()))
-	b.WriteString(row("Source", formatBytes(m.book.FileSize)+" · "+m.book.Format))
+	b.WriteString(row("Source", style.FormatBytes(m.book.FileSize)+" · "+m.book.Format))
 	b.WriteString("\n")
 
 	b.WriteString(row("Preset", m.preset.Name))
@@ -178,7 +178,7 @@ func (m PreviewModel) View() string {
 		if m.outErr != nil {
 			label = m.outErr.Error()
 		}
-		b.WriteString(row("Save as", style.Truncate(label, maxInt(m.width-18, 20))))
+		b.WriteString(row("Save as", style.Truncate(label, max(m.width-18, 20))))
 	}
 
 	b.WriteString("\n")

@@ -129,10 +129,10 @@ func (m PresetsModel) View() string {
 			badge = " " + style.BadgeStyle().Render("suggested")
 		}
 		fmt.Fprintf(&b, "%s%-16s%s\n", marker, name, badge)
-		b.WriteString(style.MutedStyle().Render("    " + style.Truncate(p.SummaryFor(m.savedSize), maxInt(m.width-6, 20))))
+		b.WriteString(style.MutedStyle().Render("    " + style.Truncate(p.SummaryFor(m.savedSize), max(m.width-6, 20))))
 		b.WriteString("\n")
 		if i == m.cursor {
-			b.WriteString(style.AccentStyle().Render("    " + style.Truncate(p.Description, maxInt(m.width-6, 20))))
+			b.WriteString(style.AccentStyle().Render("    " + style.Truncate(p.Description, max(m.width-6, 20))))
 			b.WriteString("\n")
 		}
 		b.WriteString("\n")

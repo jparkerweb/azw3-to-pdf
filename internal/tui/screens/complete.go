@@ -100,11 +100,11 @@ func (m CompleteModel) View() string {
 	b.WriteString("\n\n")
 
 	if r.Book != nil {
-		b.WriteString(style.TitleStyle().Render(style.Truncate(r.Book.Title, maxInt(m.width-4, 20))))
+		b.WriteString(style.TitleStyle().Render(style.Truncate(r.Book.Title, max(m.width-4, 20))))
 		b.WriteString("\n")
 	}
 
-	b.WriteString(row("Saved to", style.Truncate(r.OutputPath, maxInt(m.width-18, 20))))
+	b.WriteString(row("Saved to", style.Truncate(r.OutputPath, max(m.width-18, 20))))
 	b.WriteString(row("Pages", fmt.Sprintf("%d", r.Pages)))
 	b.WriteString(row("Illustrations", fmt.Sprintf("%d placed", r.Images)))
 	if r.Dropped > 0 {
@@ -113,7 +113,7 @@ func (m CompleteModel) View() string {
 	b.WriteString(row("Bookmarks", fmt.Sprintf("%d", r.Headings)))
 	b.WriteString(row("Typeface", r.Font))
 	b.WriteString(row("Size", fmt.Sprintf("%s from %s (%.0f%%)",
-		formatBytes(r.OutputSize), formatBytes(r.InputSize), r.SizeRatio()*100)))
+		style.FormatBytes(r.OutputSize), style.FormatBytes(r.InputSize), r.SizeRatio()*100)))
 	b.WriteString(row("Took", formatDuration(r.Elapsed)))
 
 	if m.notice != "" {

@@ -97,7 +97,7 @@ func (m SplashModel) View() string {
 	b.WriteString("\n\n")
 
 	for _, line := range []string{
-		"reads .azw3, .azw, .mobi and .prc",
+		"reads EPUB, Kindle, CBZ comics, FictionBook, text and HTML",
 		"no Calibre, no Python, no other software required",
 	} {
 		b.WriteString(style.Center(style.MutedStyle().Render(line), m.width))

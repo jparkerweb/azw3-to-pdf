@@ -73,7 +73,7 @@ func (m InfoModel) View() string {
 	b := m.book
 
 	var sb strings.Builder
-	sb.WriteString(style.TitleStyle().Render(style.Truncate(b.Title, maxInt(m.width-4, 20))))
+	sb.WriteString(style.TitleStyle().Render(style.Truncate(b.Title, max(m.width-4, 20))))
 	sb.WriteString("\n")
 	sb.WriteString(style.SubtitleStyle().Render(b.AuthorLine()))
 	sb.WriteString("\n\n")
@@ -86,7 +86,7 @@ func (m InfoModel) View() string {
 		}
 	}
 	add("File", filepath.Base(b.Path))
-	add("Size", formatBytes(b.FileSize))
+	add("Size", style.FormatBytes(b.FileSize))
 	add("Format", b.Format)
 	add("Compression", b.Compression)
 	if b.Paged {
@@ -96,7 +96,7 @@ func (m InfoModel) View() string {
 	add("Published", b.Published)
 	add("Language", b.Language)
 	add("ISBN", b.ISBN)
-	sb.WriteString(row("Content", fmt.Sprintf("%s of markup, %d blocks", formatBytes(int64(b.TextBytes)), m.blocks)))
+	sb.WriteString(row("Content", fmt.Sprintf("%s of markup, %d blocks", style.FormatBytes(int64(b.TextBytes)), m.blocks)))
 
 	images := fmt.Sprintf("%d embedded", len(b.Resources))
 	if b.Cover != nil {
@@ -105,12 +105,12 @@ func (m InfoModel) View() string {
 	sb.WriteString(row("Images", images))
 
 	if len(b.Subjects) > 0 {
-		sb.WriteString(row("Subjects", style.Truncate(strings.Join(b.Subjects, ", "), maxInt(m.width-18, 20))))
+		sb.WriteString(row("Subjects", style.Truncate(strings.Join(b.Subjects, ", "), max(m.width-18, 20))))
 	}
 
 	if b.Description != "" {
 		sb.WriteString("\n")
-		sb.WriteString(style.MutedStyle().Render(wrap(b.Description, maxInt(m.width-4, 30), 6)))
+		sb.WriteString(style.MutedStyle().Render(wrap(b.Description, max(m.width-4, 30), 6)))
 		sb.WriteString("\n")
 	}
 
@@ -119,7 +119,7 @@ func (m InfoModel) View() string {
 		sb.WriteString(style.AccentStyle().Render("Chapters found"))
 		sb.WriteString("\n")
 		for _, h := range m.headings {
-			sb.WriteString(style.MutedStyle().Render("  · " + style.Truncate(h, maxInt(m.width-8, 20))))
+			sb.WriteString(style.MutedStyle().Render("  · " + style.Truncate(h, max(m.width-8, 20))))
 			sb.WriteString("\n")
 		}
 	}

@@ -129,7 +129,7 @@ func (m ConvertingModel) View() string {
 	if m.err != nil {
 		b.WriteString(style.TitleStyle().Render("That did not work"))
 		b.WriteString("\n")
-		b.WriteString(style.ErrorStyle().Render(wrap(m.err.Error(), maxInt(m.width-4, 30), 8)))
+		b.WriteString(style.ErrorStyle().Render(wrap(m.err.Error(), max(m.width-4, 30), 8)))
 		b.WriteString("\n\n")
 		b.WriteString(style.KeyHintStyle().Render("enter") + style.MutedStyle().Render(" go back and try different settings"))
 		b.WriteString("\n")
@@ -138,7 +138,7 @@ func (m ConvertingModel) View() string {
 
 	title := "Converting"
 	if m.book != nil {
-		title = style.Truncate(m.book.Title, maxInt(m.width-16, 20))
+		title = style.Truncate(m.book.Title, max(m.width-16, 20))
 	}
 	b.WriteString(style.TitleStyle().Render(title))
 	b.WriteString("\n")
