@@ -13,7 +13,7 @@ This skill checks every documentation claim against the code that backs it and f
 | File | Checked against |
 |------|-----------------|
 | `README.md` | CLI flags, presets table, page sizes, config keys, font behaviour, the format table |
-| `AGENTS.md` | Package layout, format notes, build and CI commands, the "adding things" recipes |
+| `AGENTS.md` and `.agents-docs/AGENTS-*.md` | Package layout, format notes, build and CI commands, the "adding things" recipes (AGENTS.md is the index; the detail lives in `.agents-docs/`) |
 | `CHANGELOG.md` | Whether user-visible changes since the last tag are recorded |
 | `.claude/skills/*/SKILL.md` | Commands and file paths the skills tell an agent to use |
 
@@ -35,9 +35,9 @@ Also compare the README's "What it understands" format table against the readers
 
 Compare the README's YAML example against the struct tags in `internal/config/config.go`. Every key shown must exist with that exact `yaml:` tag, and the nesting must match. Then compare the font section against `internal/pdfout/fonts.go`: the candidate family names actually searched, the platform directories, which container formats `usableTTF` rejects, and what the embedded fallback is.
 
-### Agent 4: AGENTS.md
+### Agent 4: AGENTS.md and .agents-docs
 
-Check every factual claim: the package table against the directories under `internal/`, the pipeline description against what each package really does, the format notes in the `internal/ebook` section against `huffcdic.go`, `text.go` and `book.go`, the make targets against the `Makefile`, and the workflow description against `.github/workflows/`. Verify the Go version claim against `go.mod` and both workflow files, which must agree.
+Check every factual claim in AGENTS.md and each `.agents-docs/` file it links, and that every summary in AGENTS.md still matches its detail file: the file map in `.agents-docs/AGENTS-architecture.md` and the README's package table against the directories under `internal/`, the pipeline description against what each package really does, the format notes in `.agents-docs/AGENTS-architecture.md` against `huffcdic.go`, `text.go` and `book.go`, the make targets in `.agents-docs/AGENTS-commands.md` against the `Makefile`, and its workflow description against `.github/workflows/`. Verify the Go version claim against `go.mod` and both workflow files, which must agree.
 
 ### Agent 5: Changelog and skills
 

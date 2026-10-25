@@ -12,7 +12,7 @@ Use it after touching `internal/htmldoc` or `internal/pdfout`, and whenever a us
 
 ## Step 0: Find a Book and the Tools
 
-A book is needed. Ask the user for a path if none is obvious, or look in the usual places (`~/Downloads`, `~/Documents`, a Calibre library). Sample books are gitignored, so they will not be in the repo.
+A book is needed. Ask the user for a path if none is obvious, or look in the usual places (`~/Downloads`, `~/Documents`, a Calibre library). Sample books are not in the repo. Only `*.pdf`, `*.azw3`, `*.mobi` and `*.azw` are gitignored, so never copy an `.epub`, `.cbz`, `.fb2`, `.txt` or `.html` sample into the working tree.
 
 Rendering needs poppler:
 
@@ -34,7 +34,7 @@ Read the format, compression and block counts. This separates a parsing problem 
 
 | Symptom | Likely cause |
 |---------|--------------|
-| Garbled or wrong words in the headings list | Decompression bug, see the HUFF/CDIC notes in AGENTS.md |
+| Garbled or wrong words in the headings list | Decompression bug, see the HUFF/CDIC notes in `.agents-docs/AGENTS-architecture.md` |
 | 0 headings on a book that clearly has chapters | The heading heuristic or the stylesheet parse |
 | 0 images on an illustrated book | Resource indexing in `internal/ebook/book.go` |
 | Very few blocks for a long book | Flow splitting or the markup parser |
@@ -121,5 +121,5 @@ Tell the user what you actually saw, and send the rendered page images so they c
 
 - Markup and stylesheet handling: `internal/htmldoc/parse.go`, `internal/htmldoc/css.go`
 - Layout and drawing: `internal/pdfout/render.go` (entry point) and the `render_*.go` files beside it; font-size scaling: `internal/htmldoc/scale.go`
-- Book parsing and format quirks: `internal/ebook/`, and the notes in AGENTS.md
-- Sample books, PDFs and rendered pages are all gitignored, so keep them out of the repo
+- Book parsing and format quirks: `internal/ebook/`, and the format notes in `.agents-docs/AGENTS-architecture.md`
+- PDFs and Kindle samples are gitignored, but other sample formats and rendered pages are not: keep them out of the repo

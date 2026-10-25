@@ -386,8 +386,8 @@ footer { border-top: 1px solid var(--hair); padding-block: 2.6rem 3.4rem; }
 
       <h1 class="tagline rise">Ebooks, laid out as <em>PDFs</em>.</h1>
 
-      <p class="lede rise">One Go binary reads <code>.epub</code>, <code>.azw3</code>, <code>.mobi</code>,
-      <code>.cbz</code>, <code>.fb2</code>, <code>.txt</code> and <code>.html</code> and lays them out as real PDFs: selectable text, outline bookmarks from the
+      <p class="lede rise">One Go binary reads <code>.epub</code>, <code>.azw3</code>, <code>.azw</code>, <code>.mobi</code>, <code>.prc</code>,
+      <code>.cbz</code>, <code>.fb2</code>, <code>.fb2.zip</code>, <code>.txt</code>, <code>.html</code>, <code>.htm</code> and <code>.xhtml</code> and lays them out as real PDFs: selectable text, outline bookmarks from the
       book's own headings, the cover, the illustrations, the typography its stylesheet asked for.
       No Calibre. No Python. No Ghostscript. Nothing else to install.</p>
 
@@ -508,7 +508,7 @@ footer { border-top: 1px solid var(--hair); padding-block: 2.6rem 3.4rem; }
         <div class="term-body"><pre><span class="c-title">How should the pages look?</span>
 
   <span class="c-val">E-reader</span>
-    <span class="c-muted">A5 (148 x 210 mm) &middot; serif 11.0pt &middot; 14mm margins &middot; justified</span>
+    <span class="c-muted">US Letter (8.5 x 11 in) &middot; serif 11.0pt &middot; 14mm margins &middot; justified</span>
 
   <span class="c-val">Paperback</span>       <span class="c-badge">suggested</span>
     <span class="c-muted">Trade paperback (6 x 9 in) &middot; serif 11.5pt &middot; 18mm margins &middot; justified</span>
@@ -518,10 +518,10 @@ footer { border-top: 1px solid var(--hair); padding-block: 2.6rem 3.4rem; }
     <span class="c-accent">US Letter with generous margins, sized for printing and annotating.</span>
 
   <span class="c-val">Compact</span>
-    <span class="c-muted">A5 (148 x 210 mm) &middot; serif 9.5pt &middot; 9mm margins &middot; justified</span>
+    <span class="c-muted">US Letter (8.5 x 11 in) &middot; serif 9.5pt &middot; 9mm margins &middot; justified</span>
 
   <span class="c-val">Large print</span>
-    <span class="c-muted">A4 (210 x 297 mm) &middot; sans 16.0pt &middot; 18mm margins &middot; ragged right</span>
+    <span class="c-muted">US Letter (8.5 x 11 in) &middot; sans 16.0pt &middot; 18mm margins &middot; ragged right</span>
 
 <span class="c-accent">enter</span><span class="c-muted"> use this layout    </span><span class="c-accent">r</span><span class="c-muted"> jump to the suggestion</span></pre></div>
         <div class="term-foot">l layout &nbsp;&middot;&nbsp; p presets &nbsp;&middot;&nbsp; ctrl+t theme &nbsp;&middot;&nbsp; ? shortcuts &nbsp;&middot;&nbsp; ctrl+c quit</div>
@@ -568,12 +568,12 @@ footer { border-top: 1px solid var(--hair); padding-block: 2.6rem 3.4rem; }
             <tr><th>Key</th><th>Preset</th><th>Layout</th></tr>
           </thead>
           <tbody>
-            <tr><td class="key">ereader</td><td class="name">E-reader<span class="spec">the default</span></td><td class="desc">A5, 11 pt serif, 14 mm margins, justified. The best all-round reading layout.</td></tr>
+            <tr><td class="key">ereader</td><td class="name">E-reader<span class="spec">the default</span></td><td class="desc">Your default page size (Letter unless you save another), 11 pt serif, 14 mm margins, justified. The best all-round reading layout.</td></tr>
             <tr><td class="key">paperback</td><td class="name">Paperback</td><td class="desc">Trade 6 &times; 9 in with book margins and a running header. Looks like a printed novel.</td></tr>
             <tr><td class="key">print</td><td class="name">Print</td><td class="desc">US Letter with generous margins, sized for printing and annotating.</td></tr>
             <tr><td class="key">a4</td><td class="name">A4</td><td class="desc">A4 with standard margins, for everywhere that is not the US.</td></tr>
             <tr><td class="key">compact</td><td class="name">Compact</td><td class="desc">Small type and thin margins. Roughly a third fewer pages.</td></tr>
-            <tr><td class="key">large-print</td><td class="name">Large print</td><td class="desc">A4, 16 pt sans and open leading for comfortable reading.</td></tr>
+            <tr><td class="key">large-print</td><td class="name">Large print</td><td class="desc">16 pt sans and open leading for comfortable reading, on your default page size.</td></tr>
             <tr><td class="key">phone</td><td class="name">Phone</td><td class="desc">A narrow page that fills a phone screen without pinch-zooming.</td></tr>
             <tr><td class="key">manuscript</td><td class="name">Manuscript</td><td class="desc">Double-spaced Letter pages for editing and mark-up.</td></tr>
           </tbody>

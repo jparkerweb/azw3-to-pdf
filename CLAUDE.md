@@ -5,7 +5,10 @@
 See AGENTS.md for complete project documentation including:
 - Development commands and setup
 - Architecture overview
-- Format notes and gotchas
+- Environment variables
 - Testing patterns
+- Deployment guides
+- Keeping this file current / Failure log
+- Section details in .agents-docs/
 
 This file exists for Claude Code auto-loading. All AI coding agents should reference AGENTS.md.
