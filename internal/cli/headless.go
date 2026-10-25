@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -49,78 +48,41 @@ func runHeadless(cmd *cobra.Command, inputs []string) error {
 	// should not fill the log with carriage returns.
 	showProgress := term.IsTerminal(int(os.Stderr.Fd()))
 
-	jobs := flagJobs
-	if jobs < 1 {
-		jobs = 1
-	}
-	if jobs > len(inputs) {
-		jobs = len(inputs)
-	}
+	jobs := min(max(flagJobs, 1), len(inputs))
 
-	type outcome struct {
-		index  int
-		input  string
-		result *engine.Result
-		err    error
-	}
-
-	results := make([]outcome, len(inputs))
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	queue := make(chan int)
-
-	worker := func() {
-		defer wg.Done()
-		for i := range queue {
-			input := inputs[i]
-			opts := engine.Options{Input: input, Output: outOpts, PDF: pdfOpts}
-
-			var lastPrint time.Time
-			var onProgress func(engine.Progress)
+	batch := engine.BatchOptions{
+		Output:      outOpts,
+		PDF:         pdfOpts,
+		Concurrency: jobs,
+		OnResult: func(r engine.BatchResult) {
 			if showProgress && jobs == 1 {
-				onProgress = func(p engine.Progress) {
-					if time.Since(lastPrint) < 120*time.Millisecond {
-						return
-					}
-					lastPrint = time.Now()
-					fmt.Fprintf(os.Stderr, "\r  %-18s %3.0f%%  page %-5d", p.Stage, p.Percent*100, p.Page)
-				}
-			}
-
-			res, err := engine.Convert(ctx, opts, onProgress)
-			mu.Lock()
-			if onProgress != nil {
 				fmt.Fprint(os.Stderr, "\r", strings.Repeat(" ", 48), "\r")
 			}
-			results[i] = outcome{index: i, input: input, result: res, err: err}
-			reportOne(input, res, err)
-			mu.Unlock()
+			reportOne(r.Path, r.Result, r.Err)
+		},
+	}
+	if showProgress && jobs == 1 {
+		lastPrint := make([]time.Time, len(inputs))
+		batch.OnProgress = func(i int, p engine.Progress) {
+			if time.Since(lastPrint[i]) < 120*time.Millisecond {
+				return
+			}
+			lastPrint[i] = time.Now()
+			fmt.Fprintf(os.Stderr, "\r  %-18s %3.0f%%  page %-5d", p.Stage, p.Percent*100, p.Page)
 		}
 	}
-
-	wg.Add(jobs)
-	for range jobs {
-		go worker()
-	}
-	for i := range inputs {
-		select {
-		case queue <- i:
-		case <-ctx.Done():
-		}
-	}
-	close(queue)
-	wg.Wait()
+	results := engine.RunBatch(ctx, inputs, batch)
 
 	var converted, skipped, failed int
 	var lastDir string
 	for _, o := range results {
 		switch {
-		case o.err == nil && o.result != nil:
+		case o.Err == nil && o.Result != nil:
 			converted++
-			lastDir = filepath.Dir(o.result.OutputPath)
-		case errors.Is(o.err, engine.ErrSkipped):
+			lastDir = filepath.Dir(o.Result.OutputPath)
+		case errors.Is(o.Err, engine.ErrSkipped):
 			skipped++
-		case o.err != nil:
+		case o.Err != nil:
 			failed++
 		}
 	}

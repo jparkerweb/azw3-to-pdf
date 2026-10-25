@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-10-25
+
+### Changed
+- Pressing Ctrl-C during a headless batch now stops handing out books, so books that never started are no longer reported as failed
+
 ## [0.1.0] - 2026-09-04
 
 ### Added
@@ -34,5 +39,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - DRM is not removed. An encrypted book reports that clearly instead of producing a PDF of noise.
 - `.kfx`, the newest Kindle format, is a different container and is not supported.
 
-[Unreleased]: https://github.com/jparkerweb/azw3-to-pdf/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/jparkerweb/azw3-to-pdf/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/jparkerweb/azw3-to-pdf/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/jparkerweb/azw3-to-pdf/releases/tag/v0.1.0

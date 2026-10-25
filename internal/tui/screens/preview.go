@@ -118,6 +118,27 @@ func (m PreviewModel) editPath(msg tea.KeyPressMsg) (style.ScreenModel, tea.Cmd)
 	return m, nil
 }
 
+// FooterHint is the key hint line shown while this screen is current.
+func (m PreviewModel) FooterHint() string {
+	return "enter: convert  |  l: layout  |  p: preset  |  esc: back"
+}
+
+// Bindings lists this screen's help-overlay entries.
+func (m PreviewModel) Bindings() [][2]string {
+	return [][2]string{
+		{"enter", "Start converting"},
+		{"l", "Fine-tune the layout"},
+		{"p", "Pick another preset"},
+		{"o", "Change where the PDF goes"},
+	}
+}
+
+// PushState loads the shared conversion state into the screen.
+func (m PreviewModel) PushState(state style.SharedState) style.ScreenModel {
+	m.SetState(state.Book, state.Preset, state.PDF, state.Output)
+	return m
+}
+
 // Output reports the destination the conversion will use.
 func (m PreviewModel) Output() engine.OutputOptions { return m.output }
 

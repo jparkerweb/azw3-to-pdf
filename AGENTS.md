@@ -90,6 +90,10 @@ declarations that change layout (`text-align`, `font-size`, `margin-left`,
 chapter titles render as body text and run-in headings collide with the text
 after them.
 
+`css.go` only records a block's raw CSS size (`Block.Scale`). Clamping,
+dampening and the heading defaults all live in `scale.go`'s `EffectiveScale`,
+which the renderer calls; change scaling there and nowhere else.
+
 ### internal/pdfout
 
 Lays blocks out with `github.com/signintech/gopdf`. Text is positioned by
@@ -97,6 +101,10 @@ baseline from the top of the page. Fonts are resolved at render time: a system
 TrueType face if one is found, otherwise the Go faces embedded through
 `golang.org/x/image/font/gofont`. `.ttc` and `.otf` files are rejected because
 gopdf cannot embed them.
+
+`render.go` holds only the exported types and the `Render` entry point; the
+work is split by concern into `render_text.go`, `render_page.go`,
+`render_blocks.go`, `render_image.go` and `render_cover.go`.
 
 Word wrapping measures each word in its own style, so spaces that fall between
 two differently styled runs have to be tracked explicitly
@@ -111,6 +119,8 @@ calling each other.
 
 Conversions run in a goroutine and report through a one-slot buffered channel
 with a non-blocking send, so a slow terminal never slows the converter down.
+Batches go through `engine.RunBatch`, the same runner headless mode uses with
+`--jobs`; the TUI always passes a concurrency of 1.
 
 `app_test.go` renders every screen headlessly; add to it when adding a screen.
 
@@ -118,11 +128,15 @@ with a non-blocking send, so a slow terminal never slows the converter down.
 
 - **A page size**: `internal/pdfout/options.go`, the `pageSizes` map.
 - **A preset**: `internal/presets/presets.go`, the `registry` slice.
-- **A layout setting**: add it to `pdfout.Options`, then to the flag set in
-  `internal/cli/flags.go`, the `layoutFields` table in
-  `internal/tui/screens/layout.go` and `messages.LayoutChangedMsg`.
-- **A screen**: a model in `internal/tui/screens`, a `messages.Screen`
-  constant, registration in `NewApp`, and footer and help entries in `app.go`.
+- **A layout setting**: add it to `pdfout.Options`, `OptionsOverrides`,
+  `ApplyOverrides` and `OverridesFrom` in `internal/pdfout/options.go`
+  (`TestOverridesCoverEveryOption` fails if one is missed), then to the flag set
+  and `flagOverrides` in `internal/cli/flags.go` and the `layoutFields` table in
+  `internal/tui/screens/layout.go`.
+- **A screen**: a model in `internal/tui/screens` implementing
+  `style.Screen` (`FooterHint`, `Bindings`, `PushState`, alongside
+  `style.ScreenModel`'s `Init`/`Update`/`View`), a `messages.Screen` constant,
+  and registration in `NewApp`.
 
 ## Local skills
 

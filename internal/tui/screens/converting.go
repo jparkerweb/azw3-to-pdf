@@ -172,6 +172,19 @@ func (m ConvertingModel) View() string {
 	return b.String()
 }
 
+// FooterHint is the key hint line shown while this screen is current.
+func (m ConvertingModel) FooterHint() string { return "esc: cancel  |  ctrl+c: quit" }
+
+// Bindings lists this screen's help-overlay entries: none beyond the global
+// bindings.
+func (m ConvertingModel) Bindings() [][2]string { return nil }
+
+// PushState loads the shared book into the screen.
+func (m ConvertingModel) PushState(state style.SharedState) style.ScreenModel {
+	m.SetBook(state.Book)
+	return m
+}
+
 // Book reports the book being converted, used by the completion screen.
 func (m ConvertingModel) Book() *ebook.Book { return m.book }
 

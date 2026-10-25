@@ -3,6 +3,7 @@ package pdfout
 import (
 	"bytes"
 	"context"
+	"math"
 	"strings"
 	"testing"
 
@@ -136,5 +137,29 @@ func TestRenderEmptyDocumentStillWritesAPDF(t *testing.T) {
 	}
 	if !bytes.HasPrefix(buf.Bytes(), []byte("%PDF-")) {
 		t.Error("the output is not a PDF")
+	}
+}
+
+// TestBlockSize pins the renderer's own part of the font-size rule: the body
+// size times htmldoc.EffectiveScale, never below 5pt.
+func TestBlockSize(t *testing.T) {
+	r := &renderer{opts: Options{FontSize: 10}}
+
+	cases := []struct {
+		name  string
+		block htmldoc.Block
+		want  float64
+	}{
+		{"no stylesheet size", htmldoc.Block{Kind: htmldoc.KindParagraph}, 10},
+		{"small text hits the floor", htmldoc.Block{Kind: htmldoc.KindParagraph, Scale: 0.5}, 5},
+		{"damped large text", htmldoc.Block{Kind: htmldoc.KindParagraph, Scale: 2}, 10 * 1.62},
+		{"capped", htmldoc.Block{Kind: htmldoc.KindParagraph, Scale: 3.5}, 24},
+		{"heading default", htmldoc.Block{Kind: htmldoc.KindHeading, Level: 1}, 17.5},
+		{"heading with a bigger stylesheet size", htmldoc.Block{Kind: htmldoc.KindHeading, Level: 4, Scale: 2}, 10 * 1.62},
+	}
+	for _, tc := range cases {
+		if got := r.blockSize(tc.block); math.Abs(got-tc.want) > 1e-9 {
+			t.Errorf("%s: blockSize = %v, want %v", tc.name, got, tc.want)
+		}
 	}
 }

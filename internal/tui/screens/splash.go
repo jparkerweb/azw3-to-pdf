@@ -54,6 +54,18 @@ func (m SplashModel) Update(msg tea.Msg) (style.ScreenModel, tea.Cmd) {
 	return m, nil
 }
 
+// FooterHint is the key hint line shown while this screen is current.
+func (m SplashModel) FooterHint() string {
+	return "any key: continue  |  ?: help  |  ctrl+c: quit"
+}
+
+// Bindings lists this screen's help-overlay entries: none beyond the global
+// bindings.
+func (m SplashModel) Bindings() [][2]string { return nil }
+
+// PushState does nothing: the welcome screen carries no conversion state.
+func (m SplashModel) PushState(style.SharedState) style.ScreenModel { return m }
+
 // View renders the welcome screen.
 func (m SplashModel) View() string {
 	var b strings.Builder

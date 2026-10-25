@@ -127,16 +127,17 @@ func (p Preset) Options() (pdfout.Options, error) {
 	if err != nil {
 		return pdfout.Options{}, err
 	}
-	opts := pdfout.DefaultOptions()
-	opts.PageSize = size
-	opts.Margins = pdfout.UniformMargins(p.MarginMM)
-	opts.Font = p.Font
-	opts.FontSize = p.FontSize
-	opts.LineSpacing = p.LineSpacing
-	opts.Justify = p.Justify
-	opts.TitlePage = p.TitlePage
-	opts.PageNumbers = p.PageNumbers
-	opts.RunningHeader = p.RunningHeader
+	opts := pdfout.DefaultOptions().ApplyOverrides(pdfout.OptionsOverrides{
+		PageSize:      &size,
+		Margins:       pdfout.Ptr(pdfout.UniformMargins(p.MarginMM)),
+		Font:          &p.Font,
+		FontSize:      &p.FontSize,
+		LineSpacing:   &p.LineSpacing,
+		Justify:       &p.Justify,
+		TitlePage:     &p.TitlePage,
+		PageNumbers:   &p.PageNumbers,
+		RunningHeader: &p.RunningHeader,
+	})
 	opts.Normalize()
 	return opts, nil
 }

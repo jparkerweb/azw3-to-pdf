@@ -1,6 +1,7 @@
 package htmldoc
 
 import (
+	"math"
 	"strings"
 	"testing"
 )
@@ -202,5 +203,127 @@ func TestParseDoesNotDoubleSpaces(t *testing.T) {
 	doc := ParseWithCSS(`<p><span class="num">7.</span> Already spaced.</p>`, sheet)
 	if got := doc.Blocks[0].Text(); got != "7. Already spaced." {
 		t.Errorf("block text is %q", got)
+	}
+}
+
+// oldEffectiveSize is the font-size rule as it stood before EffectiveScale
+// existed (clampScale in css.go, blockSize and heading in pdfout/render.go),
+// kept here as an oracle so the refactor is pinned to the old output.
+func oldEffectiveSize(bodySize, cssScale float64, kind Kind, level int) float64 {
+	clamp := func(f float64) float64 {
+		if f < 0.5 {
+			return 0.5
+		}
+		if f > 3.5 {
+			return 3.5
+		}
+		return f
+	}
+	blockSize := func() float64 {
+		if cssScale <= 0 {
+			return bodySize
+		}
+		scale := clamp(cssScale)
+		if scale > 1 {
+			scale = 1 + (scale-1)*0.62
+		}
+		size := bodySize * scale
+		if size < 5 {
+			size = 5
+		}
+		if max := bodySize * 2.4; size > max {
+			size = max
+		}
+		return size
+	}
+	if kind != KindHeading {
+		return blockSize()
+	}
+	table := [7]float64{1, 1.75, 1.45, 1.28, 1.15, 1.06, 1.0}
+	if level < 1 || level > 6 {
+		level = 3
+	}
+	size := bodySize * table[level]
+	if css := blockSize(); cssScale > 0 && css > size {
+		size = css
+	}
+	return size
+}
+
+func TestEffectiveScaleMatchesTheOldRule(t *testing.T) {
+	scales := []float64{0, 0.1, 0.5, 0.75, 0.92, 1, 1.0001, 1.25, 1.5, 2, 2.4, 2.9, 3, 3.5, 5, 40}
+	kinds := []Kind{KindParagraph, KindHeading, KindListItem, KindQuote}
+	// Body sizes are 5..40 because Options.Normalize clamps FontSize to that.
+	for _, body := range []float64{5, 9.5, 11, 16, 40} {
+		for _, css := range scales {
+			// The parser never hands over a clamped value, so feed the raw one.
+			for _, kind := range kinds {
+				for level := -1; level <= 8; level++ {
+					got := body * EffectiveScale(css, kind, level)
+					if got < 5 {
+						got = 5
+					}
+					want := oldEffectiveSize(body, css, kind, level)
+					if got != want {
+						t.Fatalf("body %v, css %v, kind %v, level %d: got %v, want %v", body, css, kind, level, got, want)
+					}
+				}
+			}
+		}
+	}
+}
+
+func TestEffectiveScalePinnedValues(t *testing.T) {
+	cases := []struct {
+		name  string
+		css   float64
+		kind  Kind
+		level int
+		want  float64
+	}{
+		{"unset body text", 0, KindParagraph, 0, 1},
+		{"below the lower clamp", 0.1, KindParagraph, 0, 0.5},
+		{"at the lower clamp", 0.5, KindParagraph, 0, 0.5},
+		{"at body size", 1, KindParagraph, 0, 1},
+		{"damped above body size", 2, KindParagraph, 0, 1 + 1*0.62},
+		{"capped at 2.4", 3.5, KindParagraph, 0, 2.4},
+		{"above the upper clamp", 50, KindParagraph, 0, 2.4},
+		{"infinite", math.Inf(1), KindParagraph, 0, 2.4},
+		{"heading 1 default", 0, KindHeading, 1, 1.75},
+		{"heading 2 default", 0, KindHeading, 2, 1.45},
+		{"heading 3 default", 0, KindHeading, 3, 1.28},
+		{"heading 4 default", 0, KindHeading, 4, 1.15},
+		{"heading 5 default", 0, KindHeading, 5, 1.06},
+		{"heading 6 default", 0, KindHeading, 6, 1.0},
+		{"bad heading level falls back to 3", 0, KindHeading, 9, 1.28},
+		{"heading never below its default", 0.6, KindHeading, 1, 1.75},
+		{"heading larger than default wins", 2.9, KindHeading, 6, 1 + 1.9*0.62},
+		{"level ignored for paragraphs", 0, KindParagraph, 1, 1},
+	}
+	for _, tc := range cases {
+		if got := EffectiveScale(tc.css, tc.kind, tc.level); got != tc.want {
+			t.Errorf("%s: EffectiveScale(%v, %v, %d) = %v, want %v", tc.name, tc.css, tc.kind, tc.level, got, tc.want)
+		}
+	}
+}
+
+func TestParseSizeKeepsTheRawScale(t *testing.T) {
+	cases := []struct {
+		in   string
+		want float64
+	}{
+		{"500%", 5},
+		{"0.1em", 0.1},
+		{"0%", 0.5},    // would otherwise read as "unset"
+		{"-2em", 0.5},  // same
+		{"nanem", 0.5}, // ParseFloat accepts "nan"; NaN must not read as unset
+		{"150%", 1.5},
+		{"24px", 1.5},
+	}
+	for _, tc := range cases {
+		got, ok := parseSize(tc.in)
+		if !ok || got != tc.want {
+			t.Errorf("parseSize(%q) = (%v, %v), want %v", tc.in, got, ok, tc.want)
+		}
 	}
 }

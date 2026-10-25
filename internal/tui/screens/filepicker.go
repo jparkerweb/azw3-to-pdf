@@ -285,6 +285,27 @@ func (m FilePickerModel) handleTyping(msg tea.KeyPressMsg) (style.ScreenModel, t
 // SetRecursive controls whether typed directories are searched recursively.
 func (m *FilePickerModel) SetRecursive(v bool) { m.recursive = v }
 
+// FooterHint is the key hint line shown while this screen is current.
+func (m FilePickerModel) FooterHint() string {
+	return "enter: open/select  |  space: add to batch  |  tab: type a path  |  esc: back"
+}
+
+// Bindings lists this screen's help-overlay entries.
+func (m FilePickerModel) Bindings() [][2]string {
+	return [][2]string{
+		{"enter", "Open a folder, or pick the book"},
+		{"space", "Add a book to the batch"},
+		{"b", "Convert the selected batch"},
+		{"x", "Clear the batch"},
+		{"tab", "Type a path instead"},
+		{"d", "Switch drive (Windows)"},
+		{"h", "Jump to your home folder"},
+	}
+}
+
+// PushState does nothing: the file browser carries no conversion state.
+func (m FilePickerModel) PushState(style.SharedState) style.ScreenModel { return m }
+
 // View renders the browser.
 func (m FilePickerModel) View() string {
 	var b strings.Builder

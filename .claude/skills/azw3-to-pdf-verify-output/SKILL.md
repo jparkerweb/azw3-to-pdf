@@ -102,6 +102,6 @@ Tell the user what you actually saw, and send the rendered page images so they c
 ## Reference
 
 - Markup and stylesheet handling: `internal/htmldoc/parse.go`, `internal/htmldoc/css.go`
-- Layout and drawing: `internal/pdfout/render.go`
+- Layout and drawing: `internal/pdfout/render.go` (entry point) and the `render_*.go` files beside it; font-size scaling: `internal/htmldoc/scale.go`
 - Book parsing and format quirks: `internal/ebook/`, and the notes in AGENTS.md
 - Sample books, PDFs and rendered pages are all gitignored, so keep them out of the repo

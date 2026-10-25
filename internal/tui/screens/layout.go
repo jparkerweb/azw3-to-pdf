@@ -178,6 +178,28 @@ func (m *LayoutModel) setMargin(mm float64) {
 	m.opts.Normalize()
 }
 
+// FooterHint is the key hint line shown while this screen is current.
+func (m LayoutModel) FooterHint() string {
+	return "up/down: setting  |  left/right: change  |  enter: apply  |  esc: cancel"
+}
+
+// Bindings lists this screen's help-overlay entries.
+func (m LayoutModel) Bindings() [][2]string {
+	return [][2]string{
+		{"up/down", "Choose a setting"},
+		{"left/right", "Change its value"},
+		{"space", "Toggle a yes/no setting"},
+		{"enter", "Apply"},
+		{"r", "Reset to the preset"},
+	}
+}
+
+// PushState loads the shared layout options into the screen.
+func (m LayoutModel) PushState(state style.SharedState) style.ScreenModel {
+	m.SetOptions(state.PDF)
+	return m
+}
+
 // Init does nothing.
 func (m LayoutModel) Init() tea.Cmd { return nil }
 
@@ -225,26 +247,12 @@ func (m *LayoutModel) change(field layoutField, delta int) {
 	}
 }
 
+// apply sends every option the screen holds. That is only safe because the
+// App reloads the screen from its own options (SetOptions) whenever they
+// change, so m.opts is always a full snapshot of them.
 func (m LayoutModel) apply() tea.Cmd {
-	opts := m.opts
-	margin := m.marginMM()
-	return func() tea.Msg {
-		return messages.LayoutChangedMsg{
-			PageSize:    opts.PageSize.Name,
-			MarginMM:    margin,
-			Font:        opts.Font,
-			FontSize:    opts.FontSize,
-			LineSpacing: opts.LineSpacing,
-			Justify:     opts.Justify,
-			Images:      opts.Images,
-			Cover:       opts.Cover,
-			TitlePage:   opts.TitlePage,
-			PageNumbers: opts.PageNumbers,
-			Header:      opts.RunningHeader,
-			Bookmarks:   opts.Bookmarks,
-			Breaks:      opts.ChapterBreaks,
-		}
-	}
+	overrides := pdfout.OverridesFrom(m.opts)
+	return func() tea.Msg { return messages.LayoutChangedMsg{Overrides: overrides} }
 }
 
 // View renders the settings list.

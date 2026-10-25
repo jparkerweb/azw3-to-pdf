@@ -8,7 +8,10 @@ import (
 
 	"github.com/jparkerweb/azw3-to-pdf/internal/ebook"
 	"github.com/jparkerweb/azw3-to-pdf/internal/engine"
+	"github.com/jparkerweb/azw3-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/azw3-to-pdf/internal/presets"
 	"github.com/jparkerweb/azw3-to-pdf/internal/tui/messages"
+	"github.com/jparkerweb/azw3-to-pdf/internal/tui/style"
 )
 
 // sampleBook is enough of a book for the screens to have something to show.
@@ -102,6 +105,51 @@ func TestScreensRender(t *testing.T) {
 	}
 }
 
+// TestRegisteredScreens walks every registered Screen and checks that its
+// footer hint, help bindings and state push all behave without panicking.
+func TestRegisteredScreens(t *testing.T) {
+	app := newTestApp(t)
+
+	state := style.SharedState{
+		Book:   sampleBook(),
+		Preset: presets.Default(),
+		PDF:    pdfout.DefaultOptions(),
+		Output: engine.OutputOptions{Conflict: engine.ConflictOverwrite},
+		Result: &engine.Result{},
+	}
+
+	for _, screen := range messages.Screens() {
+		model, ok := app.screens[screen]
+		if !ok {
+			t.Errorf("%s has no registered screen", screen)
+			continue
+		}
+		s, ok := model.(style.Screen)
+		if !ok {
+			t.Errorf("%s does not implement style.Screen", screen)
+			continue
+		}
+		if hint := s.FooterHint(); hint == "" {
+			t.Errorf("%s: FooterHint is empty", screen)
+		}
+		s.Bindings() // some screens legitimately add none beyond the global bindings
+		if updated := s.PushState(state); updated == nil {
+			t.Errorf("%s: PushState returned a nil model", screen)
+		}
+	}
+}
+
+// TestEveryScreenIsRegistered fails if a messages.Screen constant has no
+// entry in App's screen registry, catching a forgotten registration.
+func TestEveryScreenIsRegistered(t *testing.T) {
+	app := newTestApp(t)
+	for _, screen := range messages.Screens() {
+		if _, ok := app.screens[screen]; !ok {
+			t.Errorf("%s is defined but not registered in NewApp", screen)
+		}
+	}
+}
+
 // TestNavigationFlow follows the path a reader takes through the interface.
 func TestNavigationFlow(t *testing.T) {
 	app := newTestApp(t)
@@ -142,15 +190,19 @@ func TestHelpOverlay(t *testing.T) {
 // is applied to the options used for conversion.
 func TestLayoutChangeReachesOptions(t *testing.T) {
 	app := newTestApp(t)
-	app = drive(t, app, messages.LayoutChangedMsg{
-		PageSize:    "letter",
-		MarginMM:    30,
-		Font:        "sans",
-		FontSize:    14,
-		LineSpacing: 1.8,
-		Justify:     false,
-		Images:      false,
-	})
+	letter, err := pdfout.LookupPageSize("letter")
+	if err != nil {
+		t.Fatal(err)
+	}
+	app = drive(t, app, messages.LayoutChangedMsg{Overrides: pdfout.OptionsOverrides{
+		PageSize:    &letter,
+		Margins:     pdfout.Ptr(pdfout.UniformMargins(30)),
+		Font:        pdfout.Ptr("sans"),
+		FontSize:    pdfout.Ptr(14.0),
+		LineSpacing: pdfout.Ptr(1.8),
+		Justify:     pdfout.Ptr(false),
+		Images:      pdfout.Ptr(false),
+	}})
 
 	if app.pdf.PageSize.Name != "letter" {
 		t.Errorf("page size is %q, want letter", app.pdf.PageSize.Name)

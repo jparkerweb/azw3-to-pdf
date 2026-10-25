@@ -129,6 +129,25 @@ func (m InfoModel) View() string {
 	return sb.String()
 }
 
+// FooterHint is the key hint line shown while this screen is current.
+func (m InfoModel) FooterHint() string {
+	return "enter: choose layout  |  c: convert now  |  esc: back"
+}
+
+// Bindings lists this screen's help-overlay entries.
+func (m InfoModel) Bindings() [][2]string {
+	return [][2]string{
+		{"enter", "Choose a layout preset"},
+		{"c", "Convert with the current settings"},
+	}
+}
+
+// PushState loads the shared book into the screen.
+func (m InfoModel) PushState(state style.SharedState) style.ScreenModel {
+	m.SetBook(state.Book)
+	return m
+}
+
 // wrap hard-wraps text to a width, stopping after a number of lines.
 func wrap(s string, width, maxLines int) string {
 	var out []string

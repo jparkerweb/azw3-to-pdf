@@ -296,53 +296,22 @@ func (a App) forwardCmd(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // pushState hands the shared conversion state to every screen that displays it.
 func (a *App) pushState() {
-	if m, ok := a.screens[messages.ScreenInfo].(screens.InfoModel); ok {
-		m.SetBook(a.book)
-		a.screens[messages.ScreenInfo] = m
+	state := style.SharedState{
+		Book:   a.book,
+		Preset: a.preset,
+		PDF:    a.pdf,
+		Output: a.output,
+		Result: a.result,
 	}
-	if m, ok := a.screens[messages.ScreenPresets].(screens.PresetsModel); ok {
-		m.SetBook(a.book)
-		m.SetPreset(a.preset)
-		a.screens[messages.ScreenPresets] = m
-	}
-	if m, ok := a.screens[messages.ScreenLayout].(screens.LayoutModel); ok {
-		m.SetOptions(a.pdf)
-		a.screens[messages.ScreenLayout] = m
-	}
-	if m, ok := a.screens[messages.ScreenPreview].(screens.PreviewModel); ok {
-		m.SetState(a.book, a.preset, a.pdf, a.output)
-		a.screens[messages.ScreenPreview] = m
-	}
-	if m, ok := a.screens[messages.ScreenConverting].(screens.ConvertingModel); ok {
-		m.SetBook(a.book)
-		a.screens[messages.ScreenConverting] = m
-	}
-	if m, ok := a.screens[messages.ScreenComplete].(screens.CompleteModel); ok {
-		m.SetResult(a.result)
-		a.screens[messages.ScreenComplete] = m
-	}
-	if m, ok := a.screens[messages.ScreenBatchQueue].(screens.BatchQueueModel); ok {
-		m.SetPreset(a.preset)
-		a.screens[messages.ScreenBatchQueue] = m
+	for id, model := range a.screens {
+		if s, ok := model.(style.Screen); ok {
+			a.screens[id] = s.PushState(state)
+		}
 	}
 }
 
 func (a *App) applyLayout(msg messages.LayoutChangedMsg) {
-	if size, err := pdfout.LookupPageSize(msg.PageSize); err == nil {
-		a.pdf.PageSize = size
-	}
-	a.pdf.Margins = pdfout.UniformMargins(msg.MarginMM)
-	a.pdf.Font = msg.Font
-	a.pdf.FontSize = msg.FontSize
-	a.pdf.LineSpacing = msg.LineSpacing
-	a.pdf.Justify = msg.Justify
-	a.pdf.Images = msg.Images
-	a.pdf.Cover = msg.Cover
-	a.pdf.TitlePage = msg.TitlePage
-	a.pdf.PageNumbers = msg.PageNumbers
-	a.pdf.RunningHeader = msg.Header
-	a.pdf.Bookmarks = msg.Bookmarks
-	a.pdf.ChapterBreaks = msg.Breaks
+	a.pdf = a.pdf.ApplyOverrides(msg.Overrides)
 	a.pdf.Normalize()
 }
 
@@ -434,29 +403,8 @@ func (a App) footer() string {
 }
 
 func (a App) footerHints() string {
-	switch a.current {
-	case messages.ScreenSplash:
-		return "any key: continue  |  ?: help  |  ctrl+c: quit"
-	case messages.ScreenFilePicker:
-		return "enter: open/select  |  space: add to batch  |  tab: type a path  |  esc: back"
-	case messages.ScreenInfo:
-		return "enter: choose layout  |  c: convert now  |  esc: back"
-	case messages.ScreenPresets:
-		return "up/down: browse  |  enter: use preset  |  esc: back"
-	case messages.ScreenLayout:
-		return "up/down: setting  |  left/right: change  |  enter: apply  |  esc: cancel"
-	case messages.ScreenPreview:
-		return "enter: convert  |  l: layout  |  p: preset  |  esc: back"
-	case messages.ScreenConverting:
-		return "esc: cancel  |  ctrl+c: quit"
-	case messages.ScreenComplete:
-		return "o: open PDF  |  f: folder  |  n: another book  |  q: quit"
-	case messages.ScreenBatchQueue:
-		return "enter: start  |  d: remove  |  p: preset  |  l: layout  |  esc: back"
-	case messages.ScreenBatchProgress:
-		return "esc: stop after this book  |  ctrl+c: quit"
-	case messages.ScreenBatchComplete:
-		return "f: open folder  |  n: new batch  |  q: quit"
+	if s, ok := a.screens[a.current].(style.Screen); ok {
+		return s.FooterHint()
 	}
 	return "ctrl+c: quit"
 }
@@ -512,56 +460,8 @@ func (a App) helpOverlay(base string) string {
 }
 
 func (a App) screenBindings() [][2]string {
-	switch a.current {
-	case messages.ScreenFilePicker:
-		return [][2]string{
-			{"enter", "Open a folder, or pick the book"},
-			{"space", "Add a book to the batch"},
-			{"b", "Convert the selected batch"},
-			{"x", "Clear the batch"},
-			{"tab", "Type a path instead"},
-			{"d", "Switch drive (Windows)"},
-			{"h", "Jump to your home folder"},
-		}
-	case messages.ScreenInfo:
-		return [][2]string{
-			{"enter", "Choose a layout preset"},
-			{"c", "Convert with the current settings"},
-		}
-	case messages.ScreenPresets:
-		return [][2]string{
-			{"up/down", "Move through the presets"},
-			{"enter", "Use this preset"},
-			{"r", "Use the recommended preset"},
-		}
-	case messages.ScreenLayout:
-		return [][2]string{
-			{"up/down", "Choose a setting"},
-			{"left/right", "Change its value"},
-			{"space", "Toggle a yes/no setting"},
-			{"enter", "Apply"},
-			{"r", "Reset to the preset"},
-		}
-	case messages.ScreenPreview:
-		return [][2]string{
-			{"enter", "Start converting"},
-			{"l", "Fine-tune the layout"},
-			{"p", "Pick another preset"},
-			{"o", "Change where the PDF goes"},
-		}
-	case messages.ScreenComplete:
-		return [][2]string{
-			{"o", "Open the PDF"},
-			{"f", "Open the containing folder"},
-			{"n", "Convert another book"},
-			{"q", "Quit"},
-		}
-	case messages.ScreenBatchQueue:
-		return [][2]string{
-			{"up/down", "Move through the queue"},
-			{"d", "Remove the highlighted book"},
-			{"enter", "Start the batch"},
-		}
+	if s, ok := a.screens[a.current].(style.Screen); ok {
+		return s.Bindings()
 	}
 	return nil
 }

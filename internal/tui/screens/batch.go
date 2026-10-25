@@ -137,6 +137,26 @@ func (m BatchQueueModel) Update(msg tea.Msg) (style.ScreenModel, tea.Cmd) {
 	return m, nil
 }
 
+// FooterHint is the key hint line shown while this screen is current.
+func (m BatchQueueModel) FooterHint() string {
+	return "enter: start  |  d: remove  |  p: preset  |  l: layout  |  esc: back"
+}
+
+// Bindings lists this screen's help-overlay entries.
+func (m BatchQueueModel) Bindings() [][2]string {
+	return [][2]string{
+		{"up/down", "Move through the queue"},
+		{"d", "Remove the highlighted book"},
+		{"enter", "Start the batch"},
+	}
+}
+
+// PushState loads the shared preset into the screen.
+func (m BatchQueueModel) PushState(state style.SharedState) style.ScreenModel {
+	m.SetPreset(state.Preset)
+	return m
+}
+
 func (m BatchQueueModel) readablePaths() []string {
 	var out []string
 	for _, item := range m.items {
@@ -206,6 +226,13 @@ type BatchResult struct {
 	Err    error
 }
 
+// batchConcurrency keeps the interface converting one book at a time, so the
+// progress screen has a single "now converting" book to show.
+const batchConcurrency = 1
+
+// runBatch is engine.RunBatch, replaceable in tests.
+var runBatch = engine.RunBatch
+
 // BatchProgressModel converts a queue one book at a time.
 type BatchProgressModel struct {
 	paths   []string
@@ -243,25 +270,26 @@ func (m *BatchProgressModel) Start(paths []string, out engine.OutputOptions, pdf
 	m.updates = make(chan messages.BatchProgressMsg, 1)
 	m.events = make(chan tea.Msg, len(paths)+1)
 
+	// Each book gets its own destination, so --output is ignored here.
+	out.Path = ""
+
 	updates, events := m.updates, m.events
 	go func() {
 		defer close(updates)
-		for i, path := range paths {
-			if ctx.Err() != nil {
-				break
-			}
-			// Each book gets its own destination, so --output is ignored here.
-			opts := engine.Options{Input: path, Output: out, PDF: pdf}
-			opts.Output.Path = ""
-
-			res, err := engine.Convert(ctx, opts, func(p engine.Progress) {
+		runBatch(ctx, paths, engine.BatchOptions{
+			Output:      out,
+			PDF:         pdf,
+			Concurrency: batchConcurrency,
+			OnProgress: func(i int, p engine.Progress) {
 				select {
 				case updates <- messages.BatchProgressMsg{Index: i, Progress: p}:
 				default:
 				}
-			})
-			events <- messages.BatchItemDoneMsg{Index: i, Result: res, Err: err}
-		}
+			},
+			OnResult: func(r engine.BatchResult) {
+				events <- messages.BatchItemDoneMsg{Index: r.Index, Result: r.Result, Err: r.Err}
+			},
+		})
 		events <- messages.BatchDoneMsg{}
 	}()
 
@@ -281,6 +309,19 @@ func waitForBatchProgress(ch chan messages.BatchProgressMsg) tea.Cmd {
 func waitForEvent(ch chan tea.Msg) tea.Cmd {
 	return func() tea.Msg { return <-ch }
 }
+
+// FooterHint is the key hint line shown while this screen is current.
+func (m BatchProgressModel) FooterHint() string {
+	return "esc: stop after this book  |  ctrl+c: quit"
+}
+
+// Bindings lists this screen's help-overlay entries: none beyond the global
+// bindings.
+func (m BatchProgressModel) Bindings() [][2]string { return nil }
+
+// PushState does nothing: the batch progress screen carries no shared state
+// of its own, it is driven entirely by Start.
+func (m BatchProgressModel) PushState(style.SharedState) style.ScreenModel { return m }
 
 // Results reports what happened to each book.
 func (m BatchProgressModel) Results() []BatchResult { return m.results }
@@ -431,6 +472,19 @@ func (m BatchCompleteModel) Update(msg tea.Msg) (style.ScreenModel, tea.Cmd) {
 	}
 	return m, nil
 }
+
+// FooterHint is the key hint line shown while this screen is current.
+func (m BatchCompleteModel) FooterHint() string {
+	return "f: open folder  |  n: new batch  |  q: quit"
+}
+
+// Bindings lists this screen's help-overlay entries: none beyond the global
+// bindings.
+func (m BatchCompleteModel) Bindings() [][2]string { return nil }
+
+// PushState does nothing: the batch summary is loaded via SetResults, not
+// the shared conversion state.
+func (m BatchCompleteModel) PushState(style.SharedState) style.ScreenModel { return m }
 
 func (m BatchCompleteModel) outputDir() string {
 	for _, r := range m.results {

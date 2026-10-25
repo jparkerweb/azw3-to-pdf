@@ -67,6 +67,27 @@ func (m CompleteModel) Update(msg tea.Msg) (style.ScreenModel, tea.Cmd) {
 	return m, nil
 }
 
+// FooterHint is the key hint line shown while this screen is current.
+func (m CompleteModel) FooterHint() string {
+	return "o: open PDF  |  f: folder  |  n: another book  |  q: quit"
+}
+
+// Bindings lists this screen's help-overlay entries.
+func (m CompleteModel) Bindings() [][2]string {
+	return [][2]string{
+		{"o", "Open the PDF"},
+		{"f", "Open the containing folder"},
+		{"n", "Convert another book"},
+		{"q", "Quit"},
+	}
+}
+
+// PushState loads the shared conversion result into the screen.
+func (m CompleteModel) PushState(state style.SharedState) style.ScreenModel {
+	m.SetResult(state.Result)
+	return m
+}
+
 // View renders the summary of what was written.
 func (m CompleteModel) View() string {
 	if m.result == nil {
