@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.0]
 
 ### Added
 - EPUB 2 and EPUB 3 input, both reflowable and fixed-layout: spine order, metadata, the cover, images, the book's stylesheet, and table of contents entries as headings and bookmarks. DRM-locked EPUBs are refused with a clear message; font-obfuscated books convert normally
@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Save as default on the layout screen: press `s` to keep the chosen page size for every later conversion
 
 ### Changed
+- Pressing Ctrl-C during a headless batch now stops handing out books, so books that never started are no longer reported as failed
 - The project, binary, Go module path and configuration folder are now `ebook-to-pdf`, and the environment variables are `EBOOK_TO_PDF_CONFIG` and `EBOOK_TO_PDF_LOG_LEVEL`. Settings saved under the old `azw3-to-pdf` name are not migrated
 - The default page size is US Letter. E-reader and Compact were A5 and Large print was A4; Paperback, A4 and Phone keep their own sizes. To get A5 back, choose A5 on the layout screen and press `s`, or set `layout.page_size: a5` in the configuration file
 - Comics and fixed-layout books get one PDF page per book page, with no added cover or title page
@@ -28,11 +29,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - `--no-color` now turns colour off; it was accepted but ignored
 - Pressing esc during a batch in the interface now lets the book being converted finish, as the status line says, instead of abandoning it half written
-
-## [0.1.1] - 2026-10-25
-
-### Changed
-- Pressing Ctrl-C during a headless batch now stops handing out books, so books that never started are no longer reported as failed
 
 ## [0.1.0] - 2026-09-04
 
