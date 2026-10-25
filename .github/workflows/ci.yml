@@ -65,7 +65,7 @@ jobs:
           GOOS: linux
           GOARCH: amd64
           CGO_ENABLED: "0"
-        run: go build -o azw3-to-pdf ./cmd/azw3-to-pdf/
+        run: go build -o ebook-to-pdf ./cmd/ebook-to-pdf/
 
       - name: Verify binary
-        run: ./azw3-to-pdf version
+        run: ./ebook-to-pdf version

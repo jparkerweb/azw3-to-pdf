@@ -7,12 +7,12 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/ebook"
-	"github.com/jparkerweb/azw3-to-pdf/internal/engine"
-	"github.com/jparkerweb/azw3-to-pdf/internal/pdfout"
-	"github.com/jparkerweb/azw3-to-pdf/internal/presets"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/messages"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/style"
+	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
+	"github.com/jparkerweb/ebook-to-pdf/internal/engine"
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/ebook-to-pdf/internal/presets"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/messages"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 // PreviewModel is the last stop before converting: what will be produced, and
@@ -118,6 +118,27 @@ func (m PreviewModel) editPath(msg tea.KeyPressMsg) (style.ScreenModel, tea.Cmd)
 	return m, nil
 }
 
+// FooterHint is the key hint line shown while this screen is current.
+func (m PreviewModel) FooterHint() string {
+	return "enter: convert  |  l: layout  |  p: preset  |  esc: back"
+}
+
+// Bindings lists this screen's help-overlay entries.
+func (m PreviewModel) Bindings() [][2]string {
+	return [][2]string{
+		{"enter", "Start converting"},
+		{"l", "Fine-tune the layout"},
+		{"p", "Pick another preset"},
+		{"o", "Change where the PDF goes"},
+	}
+}
+
+// PushState loads the shared conversion state into the screen.
+func (m PreviewModel) PushState(state style.SharedState) style.ScreenModel {
+	m.SetState(state.Book, state.Preset, state.PDF, state.Output)
+	return m
+}
+
 // Output reports the destination the conversion will use.
 func (m PreviewModel) Output() engine.OutputOptions { return m.output }
 
@@ -131,9 +152,9 @@ func (m PreviewModel) View() string {
 	b.WriteString(style.TitleStyle().Render("Ready to convert"))
 	b.WriteString("\n")
 
-	b.WriteString(row("Book", style.Truncate(m.book.Title, maxInt(m.width-18, 20))))
+	b.WriteString(row("Book", style.Truncate(m.book.Title, max(m.width-18, 20))))
 	b.WriteString(row("Author", m.book.AuthorLine()))
-	b.WriteString(row("Source", formatBytes(m.book.FileSize)+" · "+m.book.Format))
+	b.WriteString(row("Source", style.FormatBytes(m.book.FileSize)+" · "+m.book.Format))
 	b.WriteString("\n")
 
 	b.WriteString(row("Preset", m.preset.Name))
@@ -157,7 +178,7 @@ func (m PreviewModel) View() string {
 		if m.outErr != nil {
 			label = m.outErr.Error()
 		}
-		b.WriteString(row("Save as", style.Truncate(label, maxInt(m.width-18, 20))))
+		b.WriteString(row("Save as", style.Truncate(label, max(m.width-18, 20))))
 	}
 
 	b.WriteString("\n")

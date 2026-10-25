@@ -1,6 +1,6 @@
 ---
-name: azw3-to-pdf-verify-output
-description: Convert a real book and actually look at the resulting PDF pages, to check layout changes or diagnose a book that converts badly. Use when the user says "check the output", "does it still look right", "verify the PDF", "this book renders wrong", "the layout is off", or after any change to the parser, markup handling or renderer. Also use when the user types "/azw3-to-pdf-verify-output".
+name: ebook-to-pdf-verify-output
+description: Convert a real book and actually look at the resulting PDF pages, to check layout changes or diagnose a book that converts badly. Use when the user says "check the output", "does it still look right", "verify the PDF", "this book renders wrong", "the layout is off", or after any change to the parser, markup handling or renderer. Also use when the user types "/ebook-to-pdf-verify-output".
 user-invocable: true
 ---
 
@@ -12,7 +12,7 @@ Use it after touching `internal/htmldoc` or `internal/pdfout`, and whenever a us
 
 ## Step 0: Find a Book and the Tools
 
-A book is needed. Ask the user for a path if none is obvious, or look in the usual places (`~/Downloads`, `~/Documents`, a Calibre library). Sample books are gitignored, so they will not be in the repo.
+A book is needed. Ask the user for a path if none is obvious, or look in the usual places (`~/Downloads`, `~/Documents`, a Calibre library). Sample books are not in the repo. Only `*.pdf`, `*.azw3`, `*.mobi` and `*.azw` are gitignored, so never copy an `.epub`, `.cbz`, `.fb2`, `.txt` or `.html` sample into the working tree.
 
 Rendering needs poppler:
 
@@ -27,23 +27,24 @@ Work in the scratchpad directory, never in the repo. Copy the book to a short AS
 ## Step 1: Inspect Before Converting
 
 ```bash
-go run ./cmd/azw3-to-pdf probe /path/to/book.azw3 --verbose
+go run ./cmd/ebook-to-pdf probe /path/to/book.azw3 --verbose
 ```
 
 Read the format, compression and block counts. This separates a parsing problem from a layout problem before any pages are drawn. Signals worth noticing:
 
 | Symptom | Likely cause |
 |---------|--------------|
-| Garbled or wrong words in the headings list | Decompression bug, see the HUFF/CDIC notes in AGENTS.md |
+| Garbled or wrong words in the headings list | Decompression bug, see the HUFF/CDIC notes in `.agents-docs/AGENTS-architecture.md` |
 | 0 headings on a book that clearly has chapters | The heading heuristic or the stylesheet parse |
 | 0 images on an illustrated book | Resource indexing in `internal/ebook/book.go` |
 | Very few blocks for a long book | Flow splitting or the markup parser |
 | An error about DRM | Nothing to fix, the book is encrypted |
+| A CBZ or fixed-layout EPUB not reported as paged | Format detection in `internal/ebook/open.go` or the reader's `Paged` flag |
 
 ## Step 2: Convert
 
 ```bash
-go run ./cmd/azw3-to-pdf /path/to/book.azw3 --no-tui -o "$SCRATCH/out.pdf" --overwrite
+go run ./cmd/ebook-to-pdf /path/to/book.azw3 --no-tui -o "$SCRATCH/out.pdf" --overwrite
 ```
 
 Add `--preset paperback` or other flags when checking a specific layout. Note the reported page count, image count and bookmark count.
@@ -91,6 +92,23 @@ for t in titles[:8]:
 " "$SCRATCH/out.pdf"
 ```
 
+## Step 4b: Paged Books (Fixed-Layout EPUB and CBZ)
+
+A comic archive or a fixed-layout EPUB is pre-paginated: every book page should become exactly one PDF page, and no cover or title page is added, because the book's first page already is its cover. Check that rather than the reflow checks above:
+
+```bash
+go run ./cmd/ebook-to-pdf probe /path/to/comic.cbz --verbose     # says the book is paged
+pdfinfo -f 1 -l 5 "$SCRATCH/out.pdf" | grep "Page.*size"           # each page sized to its image
+```
+
+- The PDF page count equals the number of images in the CBZ (or spine pages in the EPUB). One extra page at the front means a cover or title page slipped in; blank pages between pictures mean a page break opened a page of its own
+- Page 1 is the book's own cover or first page, not a generated title page
+- Each picture fills its page with no margins, page number or running header, and is not stretched
+- Pages follow the book's order: for a CBZ, `2.jpg` before `10.jpg`
+- In a fixed-layout EPUB, text pages are reflowed onto a page of that book page's size; they will not match the original positioning, which is expected
+
+For a **reflowable EPUB**, run the normal checks in Steps 3 and 4, and also confirm the bookmarks follow the book's table of contents and the chapter titles render as headings rather than body text (EPUB stylesheets often style them in ways `css.go` does not read).
+
 ## Step 5: Compare Before and After
 
 For a change that is meant to alter layout, convert with the binary from `main` as well and put the same page side by side. Page counts that move by more than a percent or two without an intended reason mean something else changed.
@@ -102,6 +120,6 @@ Tell the user what you actually saw, and send the rendered page images so they c
 ## Reference
 
 - Markup and stylesheet handling: `internal/htmldoc/parse.go`, `internal/htmldoc/css.go`
-- Layout and drawing: `internal/pdfout/render.go`
-- Book parsing and format quirks: `internal/ebook/`, and the notes in AGENTS.md
-- Sample books, PDFs and rendered pages are all gitignored, so keep them out of the repo
+- Layout and drawing: `internal/pdfout/render.go` (entry point) and the `render_*.go` files beside it; font-size scaling: `internal/htmldoc/scale.go`
+- Book parsing and format quirks: `internal/ebook/`, and the format notes in `.agents-docs/AGENTS-architecture.md`
+- PDFs and Kindle samples are gitignored, but other sample formats and rendered pages are not: keep them out of the repo

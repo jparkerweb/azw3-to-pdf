@@ -1,12 +1,12 @@
 ---
-name: azw3-to-pdf-release
-description: Cut a new semver release. Updates CHANGELOG.md, commits, tags, and pushes to trigger the GoReleaser CI pipeline. Use this skill whenever the user says "release", "cut a release", "bump version", "tag a release", "ship it", or wants to publish a new version. Also use when the user types "/azw3-to-pdf-release".
+name: ebook-to-pdf-release
+description: Cut a new semver release. Updates CHANGELOG.md, commits, tags, and pushes to trigger the GoReleaser CI pipeline. Use this skill whenever the user says "release", "cut a release", "bump version", "tag a release", "ship it", or wants to publish a new version. Also use when the user types "/ebook-to-pdf-release".
 user-invocable: true
 ---
 
 # Release Workflow
 
-This skill walks through cutting a new semver release for azw3-to-pdf. Everything after the tag is automated: GitHub Actions runs the tests and then GoReleaser builds binaries for Linux, macOS and Windows on amd64 and arm64.
+This skill walks through cutting a new semver release for ebook-to-pdf. Everything after the tag is automated: GitHub Actions runs the tests and then GoReleaser builds binaries for Linux, macOS and Windows on amd64 and arm64.
 
 ## Prerequisites
 
@@ -48,8 +48,8 @@ Once the version is confirmed (say `0.2.0`):
 1. **Rename `[Unreleased]`** to `[0.2.0] - YYYY-MM-DD` using today's date
 2. **Add a fresh `[Unreleased]` header** above it, with no placeholder subsections
 3. **Update the comparison links** at the foot of the file:
-   - `[Unreleased]: https://github.com/jparkerweb/azw3-to-pdf/compare/v0.2.0...HEAD`
-   - `[0.2.0]: https://github.com/jparkerweb/azw3-to-pdf/compare/v0.1.0...v0.2.0`
+   - `[Unreleased]: https://github.com/jparkerweb/ebook-to-pdf/compare/v0.2.0...HEAD`
+   - `[0.2.0]: https://github.com/jparkerweb/ebook-to-pdf/compare/v0.1.0...v0.2.0`
 
 Entries describe what a user would notice, not how the code changed. "Hanging indents now survive conversion" belongs in the changelog; "extracted a helper in render.go" does not.
 
@@ -87,8 +87,8 @@ gh run watch --exit-status
 
 Then give the user:
 
-- **Actions**: `https://github.com/jparkerweb/azw3-to-pdf/actions`
-- **Release**: `https://github.com/jparkerweb/azw3-to-pdf/releases/tag/v0.2.0`
+- **Actions**: `https://github.com/jparkerweb/ebook-to-pdf/actions`
+- **Release**: `https://github.com/jparkerweb/ebook-to-pdf/releases/tag/v0.2.0`
 
 If the release job fails, read the log with `gh run view --log-failed`, fix the cause, delete the tag locally and remotely (`git tag -d v0.2.0 && git push origin :refs/tags/v0.2.0`), and start again from Step 3. Never leave a tag pointing at a commit whose release failed.
 
@@ -100,7 +100,7 @@ The whole pipeline can be rehearsed locally without publishing anything:
 goreleaser release --snapshot --clean --skip=publish
 ```
 
-That builds all six targets, makes the archives and checksums, and proves the version ldflags land. Check with `./dist/azw3-to-pdf_linux_amd64_v1/azw3-to-pdf version`.
+That builds all six targets, makes the archives and checksums, and proves the version ldflags land. Check with `./dist/ebook-to-pdf_linux_amd64_v1/ebook-to-pdf version`.
 
 ## Reference
 

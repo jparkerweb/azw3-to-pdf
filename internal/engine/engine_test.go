@@ -86,15 +86,18 @@ func TestSanitizeBase(t *testing.T) {
 }
 
 func TestIsBookFile(t *testing.T) {
-	for _, path := range []string{"a.azw3", "b.MOBI", "c.azw", "d.prc"} {
+	for _, path := range []string{"a.azw3", "b.MOBI", "c.azw", "d.prc", "e.epub", "f.CBZ", "g.fb2", "h.fb2.zip", "i.txt", "j.html", "k.htm"} {
 		if !IsBookFile(path) {
 			t.Errorf("IsBookFile(%q) = false", path)
 		}
 	}
-	for _, path := range []string{"a.epub", "b.pdf", "c", "d.txt"} {
+	for _, path := range []string{"b.pdf", "c", "d.zip", "e.doc"} {
 		if IsBookFile(path) {
 			t.Errorf("IsBookFile(%q) = true", path)
 		}
+	}
+	if !IsTextFile("a.TXT") || !IsTextFile("b.htm") || IsTextFile("c.epub") {
+		t.Error("IsTextFile does not match exactly the text and HTML extensions")
 	}
 }
 
@@ -113,10 +116,44 @@ func TestDiscoverBooks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got := DiscoverBooks(dir, false); len(got) != 2 {
+	if got := DiscoverBooks(dir, false, false); len(got) != 2 {
 		t.Errorf("a flat search found %d books, want 2: %v", len(got), got)
 	}
-	if got := DiscoverBooks(dir, true); len(got) != 3 {
+	if got := DiscoverBooks(dir, true, false); len(got) != 3 {
 		t.Errorf("a recursive search found %d books, want 3: %v", len(got), got)
+	}
+}
+
+func TestDiscoverBooksTextRule(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"a.epub", "b.txt", "c.html", "d.fb2.zip", "e.zip"} {
+		if err := os.WriteFile(filepath.Join(dir, name), nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := DiscoverBooks(dir, false, false); len(got) != 2 {
+		t.Errorf("without text files the scan found %d books, want 2: %v", len(got), got)
+	}
+	if got := DiscoverBooks(dir, false, true); len(got) != 4 {
+		t.Errorf("with text files the scan found %d books, want 4: %v", len(got), got)
+	}
+}
+
+func TestIsConvertible(t *testing.T) {
+	dir := t.TempDir()
+	mobi := writeTestBook(t, dir, "book.azw3", "Renamed", "<p>Hello</p>")
+	renamed := filepath.Join(dir, "book.bin")
+	if err := os.Rename(mobi, renamed); err != nil {
+		t.Fatal(err)
+	}
+	if !IsConvertible(renamed) {
+		t.Error("a Kindle book renamed to .bin is not convertible")
+	}
+	junk := filepath.Join(dir, "junk.bin")
+	if err := os.WriteFile(junk, []byte{0, 1, 2, 3}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if IsConvertible(junk) {
+		t.Error("junk.bin is convertible")
 	}
 }

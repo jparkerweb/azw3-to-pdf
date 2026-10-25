@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
 )
 
 // Preset is a named starting point for a PDF layout.
@@ -26,14 +26,21 @@ type Preset struct {
 	TitlePage     bool
 	PageNumbers   bool
 	RunningHeader bool
+
+	// SizePreset marks a preset whose page size is part of its identity, so it
+	// wins over the page size the user saved as their default.
+	SizePreset bool
 }
+
+// DefaultPageSize is the page size used when the user has not saved one.
+const DefaultPageSize = "letter"
 
 // registry is the built-in preset list, in the order they are shown.
 var registry = []Preset{
 	{
 		Key:         "ereader",
 		Name:        "E-reader",
-		Description: "Tablet-sized pages with tight margins. The best all-round reading layout.",
+		Description: "Tight margins and justified serif type. The best all-round reading layout.",
 		PageSize:    "a5", MarginMM: 14, Font: "serif", FontSize: 11, LineSpacing: 1.38,
 		Justify: true, TitlePage: true, PageNumbers: true,
 	},
@@ -43,11 +50,12 @@ var registry = []Preset{
 		Description: "Trade paperback proportions with book margins. Looks like a printed novel.",
 		PageSize:    "trade", MarginMM: 18, Font: "serif", FontSize: 11.5, LineSpacing: 1.42,
 		Justify: true, TitlePage: true, PageNumbers: true, RunningHeader: true,
+		SizePreset: true,
 	},
 	{
 		Key:         "print",
 		Name:        "Print",
-		Description: "US Letter with generous margins, sized for printing and annotating.",
+		Description: "Generous margins and a running header, for printing and annotating.",
 		PageSize:    "letter", MarginMM: 22, Font: "serif", FontSize: 11.5, LineSpacing: 1.45,
 		Justify: true, TitlePage: true, PageNumbers: true, RunningHeader: true,
 	},
@@ -57,6 +65,7 @@ var registry = []Preset{
 		Description: "A4 with standard margins, for everywhere that is not the US.",
 		PageSize:    "a4", MarginMM: 20, Font: "serif", FontSize: 11.5, LineSpacing: 1.45,
 		Justify: true, TitlePage: true, PageNumbers: true, RunningHeader: true,
+		SizePreset: true,
 	},
 	{
 		Key:         "compact",
@@ -78,11 +87,12 @@ var registry = []Preset{
 		Description: "A narrow page that fills a phone screen without pinch-zooming.",
 		PageSize:    "kindle", MarginMM: 7, Font: "sans", FontSize: 10, LineSpacing: 1.35,
 		Justify: false, TitlePage: false, PageNumbers: false,
+		SizePreset: true,
 	},
 	{
 		Key:         "manuscript",
 		Name:        "Manuscript",
-		Description: "Double-spaced Letter pages for editing and mark-up.",
+		Description: "Double-spaced pages for editing and mark-up.",
 		PageSize:    "letter", MarginMM: 25, Font: "sans", FontSize: 12, LineSpacing: 2.0,
 		Justify: false, TitlePage: true, PageNumbers: true,
 	},
@@ -121,30 +131,57 @@ func Keys() []string {
 	return keys
 }
 
-// Options converts a preset into renderer options.
+// PageSizeFor returns the page size this preset renders with, given the page
+// size the user saved as their default (empty when none is saved).
+func (p Preset) PageSizeFor(saved string) string {
+	switch {
+	case p.SizePreset:
+		return p.PageSize
+	case saved != "":
+		return saved
+	default:
+		return DefaultPageSize
+	}
+}
+
+// Options converts a preset into renderer options, with no saved page size.
 func (p Preset) Options() (pdfout.Options, error) {
-	size, err := pdfout.LookupPageSize(p.PageSize)
+	return p.OptionsWithPageSize("")
+}
+
+// OptionsWithPageSize converts a preset into renderer options, using the saved
+// default page size unless the preset is a size preset.
+func (p Preset) OptionsWithPageSize(saved string) (pdfout.Options, error) {
+	size, err := pdfout.LookupPageSize(p.PageSizeFor(saved))
 	if err != nil {
 		return pdfout.Options{}, err
 	}
-	opts := pdfout.DefaultOptions()
-	opts.PageSize = size
-	opts.Margins = pdfout.UniformMargins(p.MarginMM)
-	opts.Font = p.Font
-	opts.FontSize = p.FontSize
-	opts.LineSpacing = p.LineSpacing
-	opts.Justify = p.Justify
-	opts.TitlePage = p.TitlePage
-	opts.PageNumbers = p.PageNumbers
-	opts.RunningHeader = p.RunningHeader
+	opts := pdfout.DefaultOptions().ApplyOverrides(pdfout.OptionsOverrides{
+		PageSize:      &size,
+		Margins:       pdfout.Ptr(pdfout.UniformMargins(p.MarginMM)),
+		Font:          &p.Font,
+		FontSize:      &p.FontSize,
+		LineSpacing:   &p.LineSpacing,
+		Justify:       &p.Justify,
+		TitlePage:     &p.TitlePage,
+		PageNumbers:   &p.PageNumbers,
+		RunningHeader: &p.RunningHeader,
+	})
 	opts.Normalize()
 	return opts, nil
 }
 
-// Summary is a one-line description of the layout a preset produces.
+// Summary is a one-line description of the layout a preset produces when no
+// page size is saved.
 func (p Preset) Summary() string {
-	size, err := pdfout.LookupPageSize(p.PageSize)
-	label := p.PageSize
+	return p.SummaryFor("")
+}
+
+// SummaryFor is Summary with the page size the user saved as their default.
+func (p Preset) SummaryFor(saved string) string {
+	name := p.PageSizeFor(saved)
+	size, err := pdfout.LookupPageSize(name)
+	label := name
 	if err == nil {
 		label = size.Label
 	}

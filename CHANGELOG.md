@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- EPUB 2 and EPUB 3 input, both reflowable and fixed-layout: spine order, metadata, the cover, images, the book's stylesheet, and table of contents entries as headings and bookmarks. DRM-locked EPUBs are refused with a clear message; font-obfuscated books convert normally
+- Comic archive (`.cbz`) input: one full page per image in natural file-name order, sized to the image, with `ComicInfo.xml` metadata
+- FictionBook 2 input, plain (`.fb2`) and zipped (`.fb2.zip`), with sections as headings, poems, epigraphs, notes, embedded images and declared encodings such as Windows-1251
+- Plain text (`.txt`) input with conservative chapter heading detection and Project Gutenberg headers and licences trimmed
+- Single HTML file (`.html`, `.htm`, `.xhtml`) input with its own stylesheets and the images in its folder; remote images are never fetched
+- Content-based format detection, so a book with the wrong extension is still read as what it really is
+- `--include-text` to convert `.txt` and `.html` files found when scanning a folder, which are skipped otherwise
+- WebP images
+- Save as default on the layout screen: press `s` to keep the chosen page size for every later conversion
+
+### Changed
+- The project, binary, Go module path and configuration folder are now `ebook-to-pdf`, and the environment variables are `EBOOK_TO_PDF_CONFIG` and `EBOOK_TO_PDF_LOG_LEVEL`. Settings saved under the old `azw3-to-pdf` name are not migrated
+- The default page size is US Letter. E-reader and Compact were A5 and Large print was A4; Paperback, A4 and Phone keep their own sizes. To get A5 back, choose A5 on the layout screen and press `s`, or set `layout.page_size: a5` in the configuration file
+- Comics and fixed-layout books get one PDF page per book page, with no added cover or title page
+- The promo page moved to `ebook-to-pdf.equilllabs.com`
+- Headless output and `probe` show sizes the way the interface does, for example `312 KB` rather than `312.4 KB`
+
+### Fixed
+- `--no-color` now turns colour off; it was accepted but ignored
+- Pressing esc during a batch in the interface now lets the book being converted finish, as the status line says, instead of abandoning it half written
+
+## [0.1.1] - 2026-10-25
+
+### Changed
+- Pressing Ctrl-C during a headless batch now stops handing out books, so books that never started are no longer reported as failed
+
 ## [0.1.0] - 2026-09-04
 
 ### Added
@@ -34,5 +63,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - DRM is not removed. An encrypted book reports that clearly instead of producing a PDF of noise.
 - `.kfx`, the newest Kindle format, is a different container and is not supported.
 
-[Unreleased]: https://github.com/jparkerweb/azw3-to-pdf/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/jparkerweb/azw3-to-pdf/releases/tag/v0.1.0
+[Unreleased]: https://github.com/jparkerweb/ebook-to-pdf/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/jparkerweb/ebook-to-pdf/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/jparkerweb/ebook-to-pdf/releases/tag/v0.1.0

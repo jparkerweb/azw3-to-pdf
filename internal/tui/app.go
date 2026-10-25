@@ -10,14 +10,14 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/config"
-	"github.com/jparkerweb/azw3-to-pdf/internal/ebook"
-	"github.com/jparkerweb/azw3-to-pdf/internal/engine"
-	"github.com/jparkerweb/azw3-to-pdf/internal/pdfout"
-	"github.com/jparkerweb/azw3-to-pdf/internal/presets"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/messages"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/screens"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/style"
+	"github.com/jparkerweb/ebook-to-pdf/internal/config"
+	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
+	"github.com/jparkerweb/ebook-to-pdf/internal/engine"
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/ebook-to-pdf/internal/presets"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/messages"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/screens"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 // AppOptions configures a new interface session.
@@ -176,7 +176,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case messages.PresetSelectedMsg:
 		a.preset = msg.Preset
-		if opts, err := msg.Preset.Options(); err == nil {
+		saved := ""
+		if a.cfg != nil {
+			saved = a.cfg.Layout.PageSize
+		}
+		if opts, err := msg.Preset.OptionsWithPageSize(saved); err == nil {
 			a.pdf = opts
 		}
 		a.pushState()
@@ -189,6 +193,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.applyLayout(msg)
 		a.pushState()
 		return a.goBack()
+
+	case messages.SaveDefaultPageSizeMsg:
+		a.status = a.saveDefaultPageSize(msg.Size)
+		a.pushState()
+		return a, nil
 
 	case messages.ConvertStartMsg:
 		nav, cmd := a.navigateTo(messages.ScreenConverting)
@@ -296,54 +305,53 @@ func (a App) forwardCmd(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // pushState hands the shared conversion state to every screen that displays it.
 func (a *App) pushState() {
-	if m, ok := a.screens[messages.ScreenInfo].(screens.InfoModel); ok {
-		m.SetBook(a.book)
-		a.screens[messages.ScreenInfo] = m
+	state := style.SharedState{
+		Book:   a.book,
+		Preset: a.preset,
+		PDF:    a.pdf,
+		Output: a.output,
+		Result: a.result,
 	}
-	if m, ok := a.screens[messages.ScreenPresets].(screens.PresetsModel); ok {
-		m.SetBook(a.book)
-		m.SetPreset(a.preset)
-		a.screens[messages.ScreenPresets] = m
+	if a.cfg != nil {
+		state.SavedPageSize = a.cfg.Layout.PageSize
 	}
-	if m, ok := a.screens[messages.ScreenLayout].(screens.LayoutModel); ok {
-		m.SetOptions(a.pdf)
-		a.screens[messages.ScreenLayout] = m
-	}
-	if m, ok := a.screens[messages.ScreenPreview].(screens.PreviewModel); ok {
-		m.SetState(a.book, a.preset, a.pdf, a.output)
-		a.screens[messages.ScreenPreview] = m
-	}
-	if m, ok := a.screens[messages.ScreenConverting].(screens.ConvertingModel); ok {
-		m.SetBook(a.book)
-		a.screens[messages.ScreenConverting] = m
-	}
-	if m, ok := a.screens[messages.ScreenComplete].(screens.CompleteModel); ok {
-		m.SetResult(a.result)
-		a.screens[messages.ScreenComplete] = m
-	}
-	if m, ok := a.screens[messages.ScreenBatchQueue].(screens.BatchQueueModel); ok {
-		m.SetPreset(a.preset)
-		a.screens[messages.ScreenBatchQueue] = m
+	for id, model := range a.screens {
+		if s, ok := model.(style.Screen); ok {
+			a.screens[id] = s.PushState(state)
+		}
 	}
 }
 
 func (a *App) applyLayout(msg messages.LayoutChangedMsg) {
-	if size, err := pdfout.LookupPageSize(msg.PageSize); err == nil {
-		a.pdf.PageSize = size
-	}
-	a.pdf.Margins = pdfout.UniformMargins(msg.MarginMM)
-	a.pdf.Font = msg.Font
-	a.pdf.FontSize = msg.FontSize
-	a.pdf.LineSpacing = msg.LineSpacing
-	a.pdf.Justify = msg.Justify
-	a.pdf.Images = msg.Images
-	a.pdf.Cover = msg.Cover
-	a.pdf.TitlePage = msg.TitlePage
-	a.pdf.PageNumbers = msg.PageNumbers
-	a.pdf.RunningHeader = msg.Header
-	a.pdf.Bookmarks = msg.Bookmarks
-	a.pdf.ChapterBreaks = msg.Breaks
+	a.pdf = a.pdf.ApplyOverrides(msg.Overrides)
 	a.pdf.Normalize()
+}
+
+// saveDefaultPageSize writes size to the config file as the default page size
+// and returns the status line to show.
+func (a *App) saveDefaultPageSize(size pdfout.PageSize) string {
+	if a.cfg == nil {
+		return "No settings file is loaded, so the page size was not saved"
+	}
+	// A custom size is written in points: its Name carries no unit and would
+	// read back as millimetres.
+	value := fmt.Sprintf("%gx%gpt", size.Width, size.Height)
+	label := value
+	for _, named := range pdfout.PageSizes() {
+		if named.Name == size.Name {
+			value, label = size.Name, size.Label
+			break
+		}
+	}
+	a.cfg.Layout.PageSize = value
+	if err := a.cfg.Save(); err != nil {
+		return fmt.Sprintf("Could not save the default page size to %s: %v", a.cfg.Path(), err)
+	}
+	status := "Default page size saved: " + label
+	if a.preset.SizePreset {
+		status += " (not used by Phone, Paperback, A4)"
+	}
+	return status
 }
 
 func (a *App) syncViewport() {
@@ -412,7 +420,7 @@ func (a App) header() string {
 	if version != "" && version[0] != 'v' {
 		version = "v" + version
 	}
-	left := style.HeaderStyle().Render(fmt.Sprintf(" azw3-to-pdf %s ", version))
+	left := style.HeaderStyle().Render(fmt.Sprintf(" ebook-to-pdf %s ", version))
 	right := style.HeaderStyle().Render(fmt.Sprintf(" %s ", a.current.String()))
 
 	gap := a.width - style.Visible(left) - style.Visible(right)
@@ -430,33 +438,12 @@ func (a App) footer() string {
 	if a.viewport.TotalLineCount() > a.viewport.VisibleLineCount() {
 		hints += fmt.Sprintf("  |  PgUp/PgDn %d%%", int(a.viewport.ScrollPercent()*100))
 	}
-	return style.FooterStyle().Width(a.width).Render(style.Truncate(hints, maxInt(a.width-2, 10)))
+	return style.FooterStyle().Width(a.width).Render(style.Truncate(hints, max(a.width-2, 10)))
 }
 
 func (a App) footerHints() string {
-	switch a.current {
-	case messages.ScreenSplash:
-		return "any key: continue  |  ?: help  |  ctrl+c: quit"
-	case messages.ScreenFilePicker:
-		return "enter: open/select  |  space: add to batch  |  tab: type a path  |  esc: back"
-	case messages.ScreenInfo:
-		return "enter: choose layout  |  c: convert now  |  esc: back"
-	case messages.ScreenPresets:
-		return "up/down: browse  |  enter: use preset  |  esc: back"
-	case messages.ScreenLayout:
-		return "up/down: setting  |  left/right: change  |  enter: apply  |  esc: cancel"
-	case messages.ScreenPreview:
-		return "enter: convert  |  l: layout  |  p: preset  |  esc: back"
-	case messages.ScreenConverting:
-		return "esc: cancel  |  ctrl+c: quit"
-	case messages.ScreenComplete:
-		return "o: open PDF  |  f: folder  |  n: another book  |  q: quit"
-	case messages.ScreenBatchQueue:
-		return "enter: start  |  d: remove  |  p: preset  |  l: layout  |  esc: back"
-	case messages.ScreenBatchProgress:
-		return "esc: stop after this book  |  ctrl+c: quit"
-	case messages.ScreenBatchComplete:
-		return "f: open folder  |  n: new batch  |  q: quit"
+	if s, ok := a.screens[a.current].(style.Screen); ok {
+		return s.FooterHint()
 	}
 	return "ctrl+c: quit"
 }
@@ -512,67 +499,12 @@ func (a App) helpOverlay(base string) string {
 }
 
 func (a App) screenBindings() [][2]string {
-	switch a.current {
-	case messages.ScreenFilePicker:
-		return [][2]string{
-			{"enter", "Open a folder, or pick the book"},
-			{"space", "Add a book to the batch"},
-			{"b", "Convert the selected batch"},
-			{"x", "Clear the batch"},
-			{"tab", "Type a path instead"},
-			{"d", "Switch drive (Windows)"},
-			{"h", "Jump to your home folder"},
-		}
-	case messages.ScreenInfo:
-		return [][2]string{
-			{"enter", "Choose a layout preset"},
-			{"c", "Convert with the current settings"},
-		}
-	case messages.ScreenPresets:
-		return [][2]string{
-			{"up/down", "Move through the presets"},
-			{"enter", "Use this preset"},
-			{"r", "Use the recommended preset"},
-		}
-	case messages.ScreenLayout:
-		return [][2]string{
-			{"up/down", "Choose a setting"},
-			{"left/right", "Change its value"},
-			{"space", "Toggle a yes/no setting"},
-			{"enter", "Apply"},
-			{"r", "Reset to the preset"},
-		}
-	case messages.ScreenPreview:
-		return [][2]string{
-			{"enter", "Start converting"},
-			{"l", "Fine-tune the layout"},
-			{"p", "Pick another preset"},
-			{"o", "Change where the PDF goes"},
-		}
-	case messages.ScreenComplete:
-		return [][2]string{
-			{"o", "Open the PDF"},
-			{"f", "Open the containing folder"},
-			{"n", "Convert another book"},
-			{"q", "Quit"},
-		}
-	case messages.ScreenBatchQueue:
-		return [][2]string{
-			{"up/down", "Move through the queue"},
-			{"d", "Remove the highlighted book"},
-			{"enter", "Start the batch"},
-		}
+	if s, ok := a.screens[a.current].(style.Screen); ok {
+		return s.Bindings()
 	}
 	return nil
 }
 
 func navigate(screen messages.Screen) tea.Cmd {
 	return func() tea.Msg { return messages.NavigateMsg{Screen: screen} }
-}
-
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }

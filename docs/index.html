@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>azw3-to-pdf &middot; Kindle books, laid out as PDFs</title>
-<meta name="description" content="A single Go binary that turns .azw3, .azw, .mobi and .prc files into real PDFs. The MOBI/KF8 parser, the layout engine and the PDF writer are all built in. No Calibre, no Python, nothing else to install.">
+<title>ebook-to-pdf &middot; Ebooks, laid out as PDFs</title>
+<meta name="description" content="A single Go binary that turns EPUB, Kindle, comic, FictionBook, text and HTML files into real PDFs. Every format reader, the layout engine and the PDF writer are all built in. No Calibre, no Python, nothing else to install.">
 <meta name="color-scheme" content="dark light">
-<link rel="canonical" href="https://jparkerweb.github.io/azw3-to-pdf/">
+<link rel="canonical" href="https://ebook-to-pdf.equilllabs.com/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="azw3-to-pdf &middot; Kindle books, laid out as PDFs">
-<meta property="og:description" content="A single Go binary that turns .azw3, .azw, .mobi and .prc files into real PDFs. No Calibre, no Python, nothing else to install.">
-<meta property="og:image" content="https://jparkerweb.github.io/azw3-to-pdf/azw3-to-pdf.jpg">
+<meta property="og:title" content="ebook-to-pdf &middot; Ebooks, laid out as PDFs">
+<meta property="og:description" content="A single Go binary that turns EPUB, Kindle, comic, FictionBook, text and HTML files into real PDFs. No Calibre, no Python, nothing else to install.">
+<meta property="og:image" content="https://ebook-to-pdf.equilllabs.com/ebook-to-pdf.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -359,12 +359,12 @@ footer { border-top: 1px solid var(--hair); padding-block: 2.6rem 3.4rem; }
 
 <header class="topbar">
   <div class="wrap topbar-inner">
-    <a class="brand" href="#top">azw3<span>-to-</span>pdf</a>
+    <a class="brand" href="#top">ebook<span>-to-</span>pdf</a>
     <nav>
       <a href="#how" class="hide-sm">How it works</a>
       <a href="#presets" class="hide-sm">Presets</a>
       <a href="#formats" class="hide-sm">Formats</a>
-      <a href="https://github.com/jparkerweb/azw3-to-pdf">GitHub</a>
+      <a href="https://github.com/jparkerweb/ebook-to-pdf">GitHub</a>
       <button class="themeswitch" id="themeswitch" type="button">
         <span id="themename">Paper Sepia</span><span class="kbd">ctrl+t</span>
       </button>
@@ -377,30 +377,30 @@ footer { border-top: 1px solid var(--hair); padding-block: 2.6rem 3.4rem; }
   <!-- ================= hero ================= -->
   <div class="hero">
     <div class="wrap">
-      <div class="wordmark rise"><pre aria-label="azw3 to pdf">                     _____    __                     ______
-  ____ ______      _|__  /   / /_____     ____  ____/ / __/
- / __ '/_  / | /| / //_ &lt;   / __/ __ \   / __ \/ __  / /_
-/ /_/ / / /| |/ |/ /__/ /  / /_/ /_/ /  / /_/ / /_/ / __/
-\__,_/ /___/__/|__/____/   \__/\____/  / .___/\__,_/_/
-                                      /_/</pre></div>
+      <div class="wordmark rise"><pre aria-label="ebook to pdf">        __                __      __                     ______
+  ___  / /_  ____  ____  / /__   / /_____     ____  ____/ / __/
+ / _ \/ __ \/ __ \/ __ \/ //_/  / __/ __ \   / __ \/ __  / /_
+/  __/ /_/ / /_/ / /_/ / ,&lt;    / /_/ /_/ /  / /_/ / /_/ / __/
+\___/_.___/\____/\____/_/|_|   \__/\____/  / .___/\__,_/_/
+                                          /_/</pre></div>
 
-      <h1 class="tagline rise">Kindle books, laid out as <em>PDFs</em>.</h1>
+      <h1 class="tagline rise">Ebooks, laid out as <em>PDFs</em>.</h1>
 
-      <p class="lede rise">One Go binary reads <code>.azw3</code>, <code>.azw</code>, <code>.mobi</code>
-      and <code>.prc</code> and lays them out as real PDFs: selectable text, outline bookmarks from the
+      <p class="lede rise">One Go binary reads <code>.epub</code>, <code>.azw3</code>, <code>.azw</code>, <code>.mobi</code>, <code>.prc</code>,
+      <code>.cbz</code>, <code>.fb2</code>, <code>.fb2.zip</code>, <code>.txt</code>, <code>.html</code>, <code>.htm</code> and <code>.xhtml</code> and lays them out as real PDFs: selectable text, outline bookmarks from the
       book's own headings, the cover, the illustrations, the typography its stylesheet asked for.
       No Calibre. No Python. No Ghostscript. Nothing else to install.</p>
 
       <div class="cta rise">
         <div class="install">
-          <code><span class="p">go install</span> github.com/jparkerweb/azw3-to-pdf/cmd/azw3-to-pdf@latest</code>
+          <code><span class="p">go install</span> github.com/jparkerweb/ebook-to-pdf/cmd/ebook-to-pdf@latest</code>
           <button class="copy" type="button">copy</button>
         </div>
-        <a class="btn btn-ghost" href="https://github.com/jparkerweb/azw3-to-pdf/releases">Download a build</a>
+        <a class="btn btn-ghost" href="https://github.com/jparkerweb/ebook-to-pdf/releases">Download a build</a>
       </div>
 
       <p class="facts rise">
-        <span><b>4</b> input formats</span>
+        <span><b>6</b> input formats</span>
         <span><b>8</b> layout presets</span>
         <span><b>12</b> page sizes</span>
         <span><b>0</b> runtime dependencies</span>
@@ -409,7 +409,7 @@ footer { border-top: 1px solid var(--hair); padding-block: 2.6rem 3.4rem; }
     </div>
 
     <div class="plate">
-      <img src="azw3-to-pdf.jpg" alt="Kindle book formats being converted into PDF documents" width="1440" height="428">
+      <img src="ebook-to-pdf.jpg" alt="Ebook formats being converted into PDF documents" width="1440" height="428">
     </div>
   </div>
 
@@ -418,21 +418,21 @@ footer { border-top: 1px solid var(--hair); padding-block: 2.6rem 3.4rem; }
     <div class="wrap">
       <p class="eyebrow">Everything is in the binary</p>
       <h2 class="head">A converter, not a wrapper around one.</h2>
-      <p class="lede">Most Kindle-to-PDF tools shell out to Calibre and hope it is installed. This one
-      carries the whole pipeline: the Palm container reader, the MOBI/KF8 parser, both decompressors,
-      the markup and CSS layout engine and the PDF writer. Five stages, one file, nothing to set up
+      <p class="lede">Most ebook-to-PDF tools shell out to Calibre and hope it is installed. This one
+      carries the whole pipeline: a reader for every format (EPUB, the MOBI/KF8 parser and both its
+      decompressors, comics, FictionBook, text and HTML), the markup and CSS layout engine and the PDF writer. Five stages, one file, nothing to set up
       before the first conversion.</p>
 
       <div class="pipe">
         <div class="stage first">
           <span class="n">input</span>
           <span class="t">file bytes</span>
-          <span class="d">.azw3, .azw, .mobi or .prc</span>
+          <span class="d">.epub, .azw3, .mobi, .cbz, .fb2, .txt or .html</span>
         </div>
         <div class="stage">
           <span class="n">stage 1</span>
           <span class="t">ebook</span>
-          <span class="d">Palm container, MOBI/KF8 headers, PalmDOC and HUFF/CDIC decompression, resources</span>
+          <span class="d">Format detection, then one reader per format: EPUB, Kindle, comics, FictionBook, text, HTML</span>
         </div>
         <div class="stage">
           <span class="n">stage 2</span>
@@ -504,11 +504,11 @@ footer { border-top: 1px solid var(--hair); padding-block: 2.6rem 3.4rem; }
       Or skip the whole thing with <code>--no-tui</code> and pass flags.</p>
 
       <div class="term">
-        <div class="term-bar"><span>azw3-to-pdf</span><span class="right">presets</span></div>
+        <div class="term-bar"><span>ebook-to-pdf</span><span class="right">presets</span></div>
         <div class="term-body"><pre><span class="c-title">How should the pages look?</span>
 
   <span class="c-val">E-reader</span>
-    <span class="c-muted">A5 (148 x 210 mm) &middot; serif 11.0pt &middot; 14mm margins &middot; justified</span>
+    <span class="c-muted">US Letter (8.5 x 11 in) &middot; serif 11.0pt &middot; 14mm margins &middot; justified</span>
 
   <span class="c-val">Paperback</span>       <span class="c-badge">suggested</span>
     <span class="c-muted">Trade paperback (6 x 9 in) &middot; serif 11.5pt &middot; 18mm margins &middot; justified</span>
@@ -518,10 +518,10 @@ footer { border-top: 1px solid var(--hair); padding-block: 2.6rem 3.4rem; }
     <span class="c-accent">US Letter with generous margins, sized for printing and annotating.</span>
 
   <span class="c-val">Compact</span>
-    <span class="c-muted">A5 (148 x 210 mm) &middot; serif 9.5pt &middot; 9mm margins &middot; justified</span>
+    <span class="c-muted">US Letter (8.5 x 11 in) &middot; serif 9.5pt &middot; 9mm margins &middot; justified</span>
 
   <span class="c-val">Large print</span>
-    <span class="c-muted">A4 (210 x 297 mm) &middot; sans 16.0pt &middot; 18mm margins &middot; ragged right</span>
+    <span class="c-muted">US Letter (8.5 x 11 in) &middot; sans 16.0pt &middot; 18mm margins &middot; ragged right</span>
 
 <span class="c-accent">enter</span><span class="c-muted"> use this layout    </span><span class="c-accent">r</span><span class="c-muted"> jump to the suggestion</span></pre></div>
         <div class="term-foot">l layout &nbsp;&middot;&nbsp; p presets &nbsp;&middot;&nbsp; ctrl+t theme &nbsp;&middot;&nbsp; ? shortcuts &nbsp;&middot;&nbsp; ctrl+c quit</div>
@@ -530,20 +530,20 @@ footer { border-top: 1px solid var(--hair); padding-block: 2.6rem 3.4rem; }
       <div class="snips">
         <div class="snip">
           <p class="lbl">Convert one book from the shell</p>
-          <pre>azw3-to-pdf book.azw3 <span class="f">--no-tui</span></pre>
+          <pre>ebook-to-pdf book.epub <span class="f">--no-tui</span></pre>
         </div>
         <div class="snip">
           <p class="lbl">A whole folder, four at a time</p>
-          <pre>azw3-to-pdf ~/Books <span class="f">--recursive --no-tui</span> \
+          <pre>ebook-to-pdf ~/Books <span class="f">--recursive --no-tui</span> \
   <span class="f">--output-dir</span> ~/PDFs <span class="f">--jobs</span> 4</pre>
         </div>
         <div class="snip">
           <p class="lbl">Look inside a book without converting it</p>
-          <pre>azw3-to-pdf probe book.azw3 <span class="f">--verbose</span></pre>
+          <pre>ebook-to-pdf probe book.epub <span class="f">--verbose</span></pre>
         </div>
         <div class="snip">
           <p class="lbl">A preset, then your own measurements</p>
-          <pre>azw3-to-pdf book.azw3 <span class="f">--no-tui</span> \
+          <pre>ebook-to-pdf book.azw3 <span class="f">--no-tui</span> \
   <span class="f">--preset</span> paperback <span class="f">--page-size</span> 120x160mm \
   <span class="f">--font-size</span> 12 <span class="f">--line-spacing</span> 1.5</pre>
         </div>
@@ -559,7 +559,7 @@ footer { border-top: 1px solid var(--hair); padding-block: 2.6rem 3.4rem; }
       <p class="eyebrow">Presets</p>
       <h2 class="head">Eight ways to read the same book.</h2>
       <p class="lede">A preset sets the page size, margins, typeface, text size, leading and justification
-      in one go. <code>azw3-to-pdf presets</code> prints the list; any part of it can be overridden on the
+      in one go. <code>ebook-to-pdf presets</code> prints the list; any part of it can be overridden on the
       command line or in <code>config.yaml</code>.</p>
 
       <div class="tablewrap">
@@ -568,12 +568,12 @@ footer { border-top: 1px solid var(--hair); padding-block: 2.6rem 3.4rem; }
             <tr><th>Key</th><th>Preset</th><th>Layout</th></tr>
           </thead>
           <tbody>
-            <tr><td class="key">ereader</td><td class="name">E-reader<span class="spec">the default</span></td><td class="desc">A5, 11 pt serif, 14 mm margins, justified. The best all-round reading layout.</td></tr>
+            <tr><td class="key">ereader</td><td class="name">E-reader<span class="spec">the default</span></td><td class="desc">Your default page size (Letter unless you save another), 11 pt serif, 14 mm margins, justified. The best all-round reading layout.</td></tr>
             <tr><td class="key">paperback</td><td class="name">Paperback</td><td class="desc">Trade 6 &times; 9 in with book margins and a running header. Looks like a printed novel.</td></tr>
             <tr><td class="key">print</td><td class="name">Print</td><td class="desc">US Letter with generous margins, sized for printing and annotating.</td></tr>
             <tr><td class="key">a4</td><td class="name">A4</td><td class="desc">A4 with standard margins, for everywhere that is not the US.</td></tr>
             <tr><td class="key">compact</td><td class="name">Compact</td><td class="desc">Small type and thin margins. Roughly a third fewer pages.</td></tr>
-            <tr><td class="key">large-print</td><td class="name">Large print</td><td class="desc">A4, 16 pt sans and open leading for comfortable reading.</td></tr>
+            <tr><td class="key">large-print</td><td class="name">Large print</td><td class="desc">16 pt sans and open leading for comfortable reading, on your default page size.</td></tr>
             <tr><td class="key">phone</td><td class="name">Phone</td><td class="desc">A narrow page that fills a phone screen without pinch-zooming.</td></tr>
             <tr><td class="key">manuscript</td><td class="name">Manuscript</td><td class="desc">Double-spaced Letter pages for editing and mark-up.</td></tr>
           </tbody>
@@ -589,18 +589,20 @@ footer { border-top: 1px solid var(--hair); padding-block: 2.6rem 3.4rem; }
     <div class="wrap">
       <p class="eyebrow">What it understands</p>
       <h2 class="head">The awkward parts, handled.</h2>
-      <p class="lede">A Kindle file is a Palm database from the 1990s wrapped around HTML, compressed with
+      <p class="lede">An EPUB is a zip of XHTML chapters whose stylesheets name headings in ways no simple
+      parser expects. A Kindle file is a Palm database from the 1990s wrapped around HTML, compressed with
       a Huffman scheme that has to be decoded in 64-bit arithmetic or it yields plausible-looking nonsense.
       All of that is dealt with before the layout engine sees a word.</p>
 
       <div class="tablewrap">
         <table>
           <tbody>
-            <tr><td class="name">Containers</td><td class="desc">Palm database: <code>.azw3</code>, <code>.azw</code>, <code>.mobi</code>, <code>.prc</code></td></tr>
-            <tr><td class="name">Formats</td><td class="desc">KF8 (MOBI 8) and MOBI 6, including dual-format files where both halves are present</td></tr>
-            <tr><td class="name">Compression</td><td class="desc">None, PalmDOC (LZ77) and HUFF/CDIC</td></tr>
-            <tr><td class="name">Text</td><td class="desc">UTF-8 and Windows-1252</td></tr>
-            <tr><td class="name">Images</td><td class="desc">JPEG, PNG, GIF and BMP, plus the cover art</td></tr>
+            <tr><td class="name">EPUB</td><td class="desc">EPUB 2 and 3, reflowable and fixed-layout: <code>.epub</code>, with the table of contents as bookmarks</td></tr>
+            <tr><td class="name">Kindle</td><td class="desc">KF8 (MOBI 8) and MOBI 6 in a Palm database: <code>.azw3</code>, <code>.azw</code>, <code>.mobi</code>, <code>.prc</code>, with PalmDOC and HUFF/CDIC compression</td></tr>
+            <tr><td class="name">Comics</td><td class="desc"><code>.cbz</code>: one full page per image, in natural order</td></tr>
+            <tr><td class="name">FictionBook</td><td class="desc"><code>.fb2</code> and <code>.fb2.zip</code>, in any declared encoding</td></tr>
+            <tr><td class="name">Text and HTML</td><td class="desc"><code>.txt</code> with chapter headings found for you, and single <code>.html</code> pages with their local images</td></tr>
+            <tr><td class="name">Images</td><td class="desc">JPEG, PNG, GIF, BMP and WebP, plus the cover art</td></tr>
             <tr><td class="name">Styling</td><td class="desc">The book's own stylesheet: alignment, relative font sizes, margins, hanging indents and page breaks</td></tr>
             <tr><td class="name">Platforms</td><td class="desc">Windows, macOS and Linux, on amd64 and arm64</td></tr>
           </tbody>
@@ -610,8 +612,8 @@ footer { border-top: 1px solid var(--hair); padding-block: 2.6rem 3.4rem; }
       <div class="limits">
         <div class="limit">
           <h3>DRM is not removed</h3>
-          <p>A book bought from the Kindle store and never de-authorised is encrypted. It says so plainly
-          rather than producing a PDF of noise. Convert books you own, in an unencrypted form.</p>
+          <p>A locked EPUB or Kindle book is refused, plainly, rather than turned into a PDF of noise.
+          Buy or download DRM-free copies of the books you want to convert.</p>
         </div>
         <div class="limit">
           <h3><code>.kfx</code> is not supported</h3>
@@ -631,10 +633,10 @@ footer { border-top: 1px solid var(--hair); padding-block: 2.6rem 3.4rem; }
       <p class="lede" style="margin-inline:auto">Go 1.25, or a prebuilt binary for your platform. Nothing else.</p>
       <div class="cta">
         <div class="install">
-          <code><span class="p">go install</span> github.com/jparkerweb/azw3-to-pdf/cmd/azw3-to-pdf@latest</code>
+          <code><span class="p">go install</span> github.com/jparkerweb/ebook-to-pdf/cmd/ebook-to-pdf@latest</code>
           <button class="copy" type="button">copy</button>
         </div>
-        <a class="btn btn-primary" href="https://github.com/jparkerweb/azw3-to-pdf">View on GitHub</a>
+        <a class="btn btn-primary" href="https://github.com/jparkerweb/ebook-to-pdf">View on GitHub</a>
       </div>
     </div>
   </section>
@@ -643,28 +645,28 @@ footer { border-top: 1px solid var(--hair); padding-block: 2.6rem 3.4rem; }
 
 <footer>
   <div class="wrap foot">
-    <span>azw3-to-pdf &middot; MIT licence</span>
-    <a href="https://github.com/jparkerweb/azw3-to-pdf">Source</a>
-    <a href="https://github.com/jparkerweb/azw3-to-pdf/releases">Releases</a>
-    <a href="https://github.com/jparkerweb/azw3-to-pdf/blob/main/CHANGELOG.md">Changelog</a>
+    <span>ebook-to-pdf &middot; MIT licence</span>
+    <a href="https://github.com/jparkerweb/ebook-to-pdf">Source</a>
+    <a href="https://github.com/jparkerweb/ebook-to-pdf/releases">Releases</a>
+    <a href="https://github.com/jparkerweb/ebook-to-pdf/blob/main/CHANGELOG.md">Changelog</a>
     <span class="sp">Built in Go by <a href="https://github.com/jparkerweb">jparkerweb</a></span>
   </div>
 </footer>
 
 <script>
 (function () {
-  var INSTALL = "go install github.com/jparkerweb/azw3-to-pdf/cmd/azw3-to-pdf@latest";
+  var INSTALL = "go install github.com/jparkerweb/ebook-to-pdf/cmd/ebook-to-pdf@latest";
   var root = document.documentElement;
   var label = document.getElementById("themename");
 
   function apply(name) {
     root.setAttribute("data-theme", name);
     if (label) label.textContent = name === "ink" ? "Paper Sepia" : "Midnight Ink";
-    try { localStorage.setItem("azw3-theme", name); } catch (e) {}
+    try { localStorage.setItem("ebook-to-pdf-theme", name); } catch (e) {}
   }
 
   try {
-    var saved = localStorage.getItem("azw3-theme");
+    var saved = localStorage.getItem("ebook-to-pdf-theme");
     if (saved === "ink" || saved === "sepia") apply(saved);
     else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) apply("sepia");
   } catch (e) {}

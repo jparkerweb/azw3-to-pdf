@@ -1,6 +1,7 @@
 package style
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -156,4 +157,23 @@ func Truncate(s string, width int) string {
 		return s
 	}
 	return string(runes[:width-1]) + "…"
+}
+
+// FormatBytes renders a byte count for humans.
+func FormatBytes(b int64) string {
+	const (
+		kb = 1024
+		mb = kb * 1024
+		gb = mb * 1024
+	)
+	switch {
+	case b >= gb:
+		return fmt.Sprintf("%.2f GB", float64(b)/gb)
+	case b >= mb:
+		return fmt.Sprintf("%.1f MB", float64(b)/mb)
+	case b >= kb:
+		return fmt.Sprintf("%.0f KB", float64(b)/kb)
+	default:
+		return fmt.Sprintf("%d B", b)
+	}
 }

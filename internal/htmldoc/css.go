@@ -235,11 +235,11 @@ func parseSize(v string) (float64, bool) {
 	switch {
 	case strings.HasSuffix(v, "%"):
 		if f, err := strconv.ParseFloat(strings.TrimSuffix(v, "%"), 64); err == nil {
-			return clampScale(f / 100), true
+			return positiveScale(f / 100), true
 		}
 	case strings.HasSuffix(v, "em"), strings.HasSuffix(v, "rem"):
 		if f, err := strconv.ParseFloat(strings.TrimSuffix(strings.TrimSuffix(v, "em"), "r"), 64); err == nil {
-			return clampScale(f), true
+			return positiveScale(f), true
 		}
 	case strings.HasSuffix(v, "pt"), strings.HasSuffix(v, "px"):
 		// Absolute sizes are relative to a nominal 12pt/16px body.
@@ -248,18 +248,17 @@ func parseSize(v string) (float64, bool) {
 			base = 16
 		}
 		if f, err := strconv.ParseFloat(v[:len(v)-2], 64); err == nil && f > 0 {
-			return clampScale(f / base), true
+			return positiveScale(f / base), true
 		}
 	}
 	return 0, false
 }
 
-func clampScale(f float64) float64 {
-	if f < 0.5 {
-		return 0.5
-	}
-	if f > 3.5 {
-		return 3.5
+// positiveScale keeps a zero, negative or NaN size from reading as "unset",
+// which Block.Scale uses 0 to mean (ParseFloat accepts "nan"). The range limits are applied by EffectiveScale.
+func positiveScale(f float64) float64 {
+	if !(f > 0) {
+		return minCSSScale
 	}
 	return f
 }

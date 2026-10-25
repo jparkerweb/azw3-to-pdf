@@ -6,8 +6,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/messages"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/style"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/messages"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 // splashDwell is how long the welcome screen stays up on its own.
@@ -15,12 +15,12 @@ const splashDwell = 1500 * time.Millisecond
 
 // logo is the wordmark shown on the welcome screen.
 var logo = []string{
-	`                     _____    __                     ______`,
-	`  ____ ______      _|__  /   / /_____     ____  ____/ / __/`,
-	` / __ '/_  / | /| / //_ <   / __/ __ \   / __ \/ __  / /_`,
-	`/ /_/ / / /| |/ |/ /__/ /  / /_/ /_/ /  / /_/ / /_/ / __/`,
-	`\__,_/ /___/__/|__/____/   \__/\____/  / .___/\__,_/_/`,
-	`                                      /_/`,
+	`        __                __      __                     ______`,
+	`  ___  / /_  ____  ____  / /__   / /_____     ____  ____/ / __/`,
+	` / _ \/ __ \/ __ \/ __ \/ //_/  / __/ __ \   / __ \/ __  / /_`,
+	`/  __/ /_/ / /_/ / /_/ / ,<    / /_/ /_/ /  / /_/ / /_/ / __/`,
+	`\___/_.___/\____/\____/_/|_|   \__/\____/  / .___/\__,_/_/`,
+	`                                          /_/`,
 }
 
 type splashDoneMsg struct{}
@@ -54,6 +54,18 @@ func (m SplashModel) Update(msg tea.Msg) (style.ScreenModel, tea.Cmd) {
 	return m, nil
 }
 
+// FooterHint is the key hint line shown while this screen is current.
+func (m SplashModel) FooterHint() string {
+	return "any key: continue  |  ?: help  |  ctrl+c: quit"
+}
+
+// Bindings lists this screen's help-overlay entries: none beyond the global
+// bindings.
+func (m SplashModel) Bindings() [][2]string { return nil }
+
+// PushState does nothing: the welcome screen carries no conversion state.
+func (m SplashModel) PushState(style.SharedState) style.ScreenModel { return m }
+
 // View renders the welcome screen.
 func (m SplashModel) View() string {
 	var b strings.Builder
@@ -81,11 +93,11 @@ func (m SplashModel) View() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(style.Center(style.SubtitleStyle().Render("Kindle books, laid out as PDFs."), m.width))
+	b.WriteString(style.Center(style.SubtitleStyle().Render("Ebooks, laid out as PDFs."), m.width))
 	b.WriteString("\n\n")
 
 	for _, line := range []string{
-		"reads .azw3, .azw, .mobi and .prc",
+		"reads EPUB, Kindle, CBZ comics, FictionBook, text and HTML",
 		"no Calibre, no Python, no other software required",
 	} {
 		b.WriteString(style.Center(style.MutedStyle().Render(line), m.width))

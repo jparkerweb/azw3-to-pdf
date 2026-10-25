@@ -1,6 +1,6 @@
 ---
-name: azw3-to-pdf-update-docs
-description: Audit and update all project documentation (README.md, AGENTS.md, CHANGELOG.md and the local skills) so it matches the current codebase. Use when the user says "update docs", "sync docs", "audit docs", "docs are stale", "refresh documentation", or after significant code changes. Also use when the user types "/azw3-to-pdf-update-docs".
+name: ebook-to-pdf-update-docs
+description: Audit and update all project documentation (README.md, AGENTS.md, CHANGELOG.md and the local skills) so it matches the current codebase. Use when the user says "update docs", "sync docs", "audit docs", "docs are stale", "refresh documentation", or after significant code changes. Also use when the user types "/ebook-to-pdf-update-docs".
 user-invocable: true
 ---
 
@@ -12,8 +12,8 @@ This skill checks every documentation claim against the code that backs it and f
 
 | File | Checked against |
 |------|-----------------|
-| `README.md` | CLI flags, presets table, page sizes, config keys, font behaviour, format support |
-| `AGENTS.md` | Package layout, format notes, build and CI commands, the "adding things" recipes |
+| `README.md` | CLI flags, presets table, page sizes, config keys, font behaviour, the format table |
+| `AGENTS.md` and `.agents-docs/AGENTS-*.md` | Package layout, format notes, build and CI commands, the "adding things" recipes (AGENTS.md is the index; the detail lives in `.agents-docs/`) |
 | `CHANGELOG.md` | Whether user-visible changes since the last tag are recorded |
 | `.claude/skills/*/SKILL.md` | Commands and file paths the skills tell an agent to use |
 
@@ -29,13 +29,15 @@ Compare the README's usage examples and flag mentions against `registerRunFlags`
 
 Compare the README presets table against the `registry` slice in `internal/presets/presets.go`: keys, names, page size, font, size, margins and justification must match `Preset.Summary()`. Compare the page size claims against the `pageSizes` map in `internal/pdfout/options.go`, including the count and the custom measurement suffixes accepted by `parseCustomSize` (`mm`, `in`, `pt`).
 
+Also compare the README's "What it understands" format table against the readers: every `Format` constant in `internal/ebook/open.go` needs a row, every extension in `engine.BookExtensions` (`internal/engine/output.go`) must appear in it, and each row's limits must match the reader file (`epub*.go`, `mobi.go`, `cbz.go`, `fb2.go`, `plaintext.go`, `htmlfile.go`). Check that folder scans skipping `.txt` and `.html` without `--include-text` is still true in `engine.DiscoverBooks`.
+
 ### Agent 3: README, configuration and fonts
 
 Compare the README's YAML example against the struct tags in `internal/config/config.go`. Every key shown must exist with that exact `yaml:` tag, and the nesting must match. Then compare the font section against `internal/pdfout/fonts.go`: the candidate family names actually searched, the platform directories, which container formats `usableTTF` rejects, and what the embedded fallback is.
 
-### Agent 4: AGENTS.md
+### Agent 4: AGENTS.md and .agents-docs
 
-Check every factual claim: the package table against the directories under `internal/`, the pipeline description against what each package really does, the format notes in the `internal/ebook` section against `huffcdic.go`, `text.go` and `book.go`, the make targets against the `Makefile`, and the workflow description against `.github/workflows/`. Verify the Go version claim against `go.mod` and both workflow files, which must agree.
+Check every factual claim in AGENTS.md and each `.agents-docs/` file it links, and that every summary in AGENTS.md still matches its detail file: the file map in `.agents-docs/AGENTS-architecture.md` and the README's package table against the directories under `internal/`, the pipeline description against what each package really does, the format notes in `.agents-docs/AGENTS-architecture.md` against `huffcdic.go`, `text.go` and `book.go`, the make targets in `.agents-docs/AGENTS-commands.md` against the `Makefile`, and its workflow description against `.github/workflows/`. Verify the Go version claim against `go.mod` and both workflow files, which must agree.
 
 ### Agent 5: Changelog and skills
 
@@ -55,6 +57,7 @@ Pay extra attention to these, which are the usual culprits:
 
 - **New flags** added to `internal/cli/flags.go` but never added to the README
 - **New presets or page sizes** added to the registry but missing from the README tables
+- **New formats** with a reader in `internal/ebook` but no row in the README's format table, or an extension missing from it
 - **Config keys** renamed in `internal/config/config.go` while the README example keeps the old ones
 - **The Go version** in `go.mod` diverging from the pin in both workflow files
 - **Package descriptions** in AGENTS.md going stale when a file moves between packages

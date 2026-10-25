@@ -6,16 +6,22 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/engine"
-	"github.com/jparkerweb/azw3-to-pdf/internal/pdfout"
-	"github.com/jparkerweb/azw3-to-pdf/internal/presets"
+	"github.com/jparkerweb/ebook-to-pdf/internal/engine"
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/ebook-to-pdf/internal/presets"
 )
 
-// completeBookFiles offers Kindle books and directories for path arguments.
+// completeBookFiles offers ebooks and directories for path arguments. Shells
+// filter on the last extension only, so ".fb2.zip" offers "zip", listed once.
 func completeBookFiles(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	exts := make([]string, 0, len(engine.BookExtensions))
+	seen := map[string]bool{}
 	for _, e := range engine.BookExtensions {
-		exts = append(exts, strings.TrimPrefix(e, "."))
+		last := e[strings.LastIndex(e, ".")+1:]
+		if !seen[last] {
+			seen[last] = true
+			exts = append(exts, last)
+		}
 	}
 	return exts, cobra.ShellCompDirectiveFilterFileExt
 }

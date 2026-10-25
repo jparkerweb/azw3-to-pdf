@@ -2,9 +2,10 @@
 package messages
 
 import (
-	"github.com/jparkerweb/azw3-to-pdf/internal/ebook"
-	"github.com/jparkerweb/azw3-to-pdf/internal/engine"
-	"github.com/jparkerweb/azw3-to-pdf/internal/presets"
+	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
+	"github.com/jparkerweb/ebook-to-pdf/internal/engine"
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/ebook-to-pdf/internal/presets"
 )
 
 // Screen identifies a screen in the interface.
@@ -22,7 +23,21 @@ const (
 	ScreenBatchQueue
 	ScreenBatchProgress
 	ScreenBatchComplete
+
+	// screenCount is a sentinel, not a real screen: it lets tests iterate
+	// every defined Screen without hand-maintaining a list that could fall
+	// out of step with this block.
+	screenCount
 )
+
+// Screens lists every defined Screen, in declaration order.
+func Screens() []Screen {
+	out := make([]Screen, 0, int(screenCount))
+	for s := Screen(0); s < screenCount; s++ {
+		out = append(out, s)
+	}
+	return out
+}
 
 // String returns the screen's title, shown in the header.
 func (s Screen) String() string {
@@ -50,7 +65,7 @@ func (s Screen) String() string {
 	case ScreenBatchComplete:
 		return "Batch finished"
 	}
-	return "azw3-to-pdf"
+	return "ebook-to-pdf"
 }
 
 // NavigateMsg switches to another screen.
@@ -75,22 +90,14 @@ type BookLoadedMsg struct {
 // PresetSelectedMsg reports the chosen layout preset.
 type PresetSelectedMsg struct{ Preset presets.Preset }
 
-// LayoutChangedMsg carries fine-tuned layout settings back to the preview.
-type LayoutChangedMsg struct {
-	PageSize    string
-	MarginMM    float64
-	Font        string
-	FontSize    float64
-	LineSpacing float64
-	Justify     bool
-	Images      bool
-	Cover       bool
-	TitlePage   bool
-	PageNumbers bool
-	Header      bool
-	Bookmarks   bool
-	Breaks      bool
-}
+// LayoutChangedMsg carries fine-tuned layout settings back to the preview. It
+// holds the overrides rather than one field per knob, so a new layout option
+// does not need a new message field.
+type LayoutChangedMsg struct{ Overrides pdfout.OptionsOverrides }
+
+// SaveDefaultPageSizeMsg asks for a page size to be saved as the default for
+// later runs.
+type SaveDefaultPageSizeMsg struct{ Size pdfout.PageSize }
 
 // ConvertStartMsg asks the converting screen to begin.
 type ConvertStartMsg struct{}

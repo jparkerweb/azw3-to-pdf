@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
 )
 
 // ConflictMode decides what happens when the output file already exists.
@@ -86,7 +88,7 @@ func nextFreeName(path string) string {
 }
 
 // sanitizeBase strips characters that are illegal in file names on Windows.
-// Kindle file names routinely contain colons from the book's subtitle.
+// Ebook file names routinely contain colons from the book's subtitle.
 func sanitizeBase(name string) string {
 	replacer := strings.NewReplacer(
 		":", " -", "*", "", "?", "", "\"", "'", "<", "(", ">", ")", "|", "-",
@@ -103,29 +105,58 @@ func sanitizeBase(name string) string {
 	return out
 }
 
-// BookExtensions are the input files this tool understands.
-var BookExtensions = []string{".azw3", ".azw", ".mobi", ".prc"}
+// BookExtensions are the input files this tool understands, matched as
+// lower-cased suffixes so that ".fb2.zip" works while a plain ".zip" does not.
+var BookExtensions = []string{".azw3", ".azw", ".mobi", ".prc", ".epub", ".cbz", ".fb2", ".fb2.zip", ".txt", ".html", ".htm", ".xhtml"}
 
-// IsBookFile reports whether a path looks like a Kindle book.
+// TextExtensions are the book files a folder scan skips unless asked: a
+// folder of documents is full of them, and few are books.
+var TextExtensions = []string{".txt", ".html", ".htm", ".xhtml"}
+
+// IsBookFile reports whether a path has one of the ebook extensions.
 func IsBookFile(path string) bool {
-	ext := strings.ToLower(filepath.Ext(path))
-	for _, e := range BookExtensions {
-		if ext == e {
+	return hasSuffixIn(path, BookExtensions)
+}
+
+// IsTextFile reports whether a path is a plain text or HTML file.
+func IsTextFile(path string) bool {
+	return hasSuffixIn(path, TextExtensions)
+}
+
+// IsConvertible reports whether a file named directly can be converted: by
+// its extension, or failing that by its content, so a book with the wrong
+// name still works.
+func IsConvertible(path string) bool {
+	if IsBookFile(path) {
+		return true
+	}
+	f, err := ebook.DetectFile(path)
+	return err == nil && f != ebook.FormatUnknown
+}
+
+func hasSuffixIn(path string, exts []string) bool {
+	lower := strings.ToLower(path)
+	for _, e := range exts {
+		if strings.HasSuffix(lower, e) {
 			return true
 		}
 	}
 	return false
 }
 
-// DiscoverBooks lists the Kindle books in a directory, optionally recursing.
-func DiscoverBooks(dir string, recursive bool) []string {
+// DiscoverBooks lists the ebooks in a directory, optionally recursing. Text
+// and HTML files are left out unless includeText is set.
+func DiscoverBooks(dir string, recursive, includeText bool) []string {
 	var found []string
+	wanted := func(path string) bool {
+		return IsBookFile(path) && (includeText || !IsTextFile(path))
+	}
 	if recursive {
 		_ = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 			if err != nil || d.IsDir() {
 				return nil
 			}
-			if IsBookFile(path) {
+			if wanted(path) {
 				found = append(found, path)
 			}
 			return nil
@@ -142,7 +173,7 @@ func DiscoverBooks(dir string, recursive bool) []string {
 			continue
 		}
 		path := filepath.Join(dir, e.Name())
-		if IsBookFile(path) {
+		if wanted(path) {
 			found = append(found, path)
 		}
 	}

@@ -1,6 +1,6 @@
 ---
-name: azw3-to-pdf-add-preset
-description: Add or change a layout preset or page size, touching every place that has to agree (registry, tests, README table, changelog). Use when the user says "add a preset", "new preset", "add a page size", "change the ereader preset", or describes a layout they want available by name. Also use when the user types "/azw3-to-pdf-add-preset".
+name: ebook-to-pdf-add-preset
+description: Add or change a layout preset or page size, touching every place that has to agree (registry, tests, README table, changelog). Use when the user says "add a preset", "new preset", "add a page size", "change the ereader preset", or describes a layout they want available by name. Also use when the user types "/ebook-to-pdf-add-preset".
 user-invocable: true
 ---
 
@@ -24,20 +24,23 @@ A **page size** is only paper dimensions. Add one when the user wants a size tha
 
 ### Step 1: The registry
 
-Append to the `registry` slice in `internal/presets/presets.go`. Order matters, because it is the order shown in the interface and by `azw3-to-pdf presets`. Fill in every field:
+Append to the `registry` slice in `internal/presets/presets.go`. Order matters, because it is the order shown in the interface and by `ebook-to-pdf presets`. Fill in every field:
 
 | Field | Notes |
 |-------|-------|
 | `Key` | Lower case, hyphenated, used on the command line |
 | `Name` | Title case, shown in the interface |
 | `Description` | One sentence saying who it is for, not what it sets |
-| `PageSize` | A key from the `pageSizes` map, or a measurement string |
+| `PageSize` | A key from the `pageSizes` map, or a measurement string. Used only when `SizePreset` is set |
+| `SizePreset` | True only when the page size is the point of the preset (Paperback, A4, Phone). Leave it false otherwise |
 | `MarginMM` | Millimetres, converted for you |
 | `Font` | `serif`, `sans` or `mono` |
 | `FontSize` | Points |
 | `LineSpacing` | A multiple of the font size, roughly 1.2 to 1.6 for reading |
 | `Justify` | True for a printed-book feel, false for screens and large print |
 | `TitlePage`, `PageNumbers`, `RunningHeader` | The extras |
+
+A preset without `SizePreset` does not pick its own paper: it takes the user's saved default page size (`layout.page_size`, saved with `s` on the layout screen), which is US Letter (`DefaultPageSize`) when nothing is saved. Always resolve a preset's size through `Preset.PageSizeFor`, or `OptionsWithPageSize` and `SummaryFor`, which use it. In the README presets table, such a preset's page size column reads "default (Letter)".
 
 ### Step 2: Sanity check the geometry
 
@@ -49,7 +52,7 @@ Check the line length by hand as well. A text column should hold roughly 45 to 7
 characters ≈ (page width − left margin − right margin) / (font size × 0.5)
 ```
 
-The layout screen prints this figure, so `go run ./cmd/azw3-to-pdf` and press `l` to see it.
+The layout screen prints this figure, so `go run ./cmd/ebook-to-pdf` and press `l` to see it.
 
 ### Step 3: The recommendation engine
 
@@ -66,11 +69,11 @@ Nothing else references presets by name. The command line help, the shell comple
 
 ```bash
 make ci
-go run ./cmd/azw3-to-pdf presets
-go run ./cmd/azw3-to-pdf /path/to/book.azw3 --no-tui --preset <key> -o out.pdf --overwrite
+go run ./cmd/ebook-to-pdf presets
+go run ./cmd/ebook-to-pdf /path/to/book.azw3 --no-tui --preset <key> -o out.pdf --overwrite
 ```
 
-Then look at the pages: use the `azw3-to-pdf-verify-output` skill. A preset that has never been rendered is a guess, not a preset.
+Then look at the pages: use the `ebook-to-pdf-verify-output` skill. A preset that has never been rendered is a guess, not a preset.
 
 ## Changing an Existing Preset
 
@@ -80,4 +83,5 @@ Same steps, with one extra consideration: changing a preset changes the output f
 
 - Registry and recommendation: `internal/presets/presets.go`
 - Page sizes and option clamping: `internal/pdfout/options.go`
-- Where a preset ends up: `Preset.Options()` produces a `pdfout.Options`, which the command line and the interface then override
+- The default page size: `DefaultPageSize`, `Preset.PageSizeFor` and `SizePreset` in `internal/presets/presets.go`
+- Where a preset ends up: `Preset.OptionsWithPageSize(saved)` produces a `pdfout.Options`, which the command line and the interface then override

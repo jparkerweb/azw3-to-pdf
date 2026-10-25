@@ -7,9 +7,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/engine"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/messages"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/style"
+	"github.com/jparkerweb/ebook-to-pdf/internal/engine"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/messages"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 // CompleteModel reports a finished conversion and offers what to do next.
@@ -67,6 +67,27 @@ func (m CompleteModel) Update(msg tea.Msg) (style.ScreenModel, tea.Cmd) {
 	return m, nil
 }
 
+// FooterHint is the key hint line shown while this screen is current.
+func (m CompleteModel) FooterHint() string {
+	return "o: open PDF  |  f: folder  |  n: another book  |  q: quit"
+}
+
+// Bindings lists this screen's help-overlay entries.
+func (m CompleteModel) Bindings() [][2]string {
+	return [][2]string{
+		{"o", "Open the PDF"},
+		{"f", "Open the containing folder"},
+		{"n", "Convert another book"},
+		{"q", "Quit"},
+	}
+}
+
+// PushState loads the shared conversion result into the screen.
+func (m CompleteModel) PushState(state style.SharedState) style.ScreenModel {
+	m.SetResult(state.Result)
+	return m
+}
+
 // View renders the summary of what was written.
 func (m CompleteModel) View() string {
 	if m.result == nil {
@@ -79,11 +100,11 @@ func (m CompleteModel) View() string {
 	b.WriteString("\n\n")
 
 	if r.Book != nil {
-		b.WriteString(style.TitleStyle().Render(style.Truncate(r.Book.Title, maxInt(m.width-4, 20))))
+		b.WriteString(style.TitleStyle().Render(style.Truncate(r.Book.Title, max(m.width-4, 20))))
 		b.WriteString("\n")
 	}
 
-	b.WriteString(row("Saved to", style.Truncate(r.OutputPath, maxInt(m.width-18, 20))))
+	b.WriteString(row("Saved to", style.Truncate(r.OutputPath, max(m.width-18, 20))))
 	b.WriteString(row("Pages", fmt.Sprintf("%d", r.Pages)))
 	b.WriteString(row("Illustrations", fmt.Sprintf("%d placed", r.Images)))
 	if r.Dropped > 0 {
@@ -92,7 +113,7 @@ func (m CompleteModel) View() string {
 	b.WriteString(row("Bookmarks", fmt.Sprintf("%d", r.Headings)))
 	b.WriteString(row("Typeface", r.Font))
 	b.WriteString(row("Size", fmt.Sprintf("%s from %s (%.0f%%)",
-		formatBytes(r.OutputSize), formatBytes(r.InputSize), r.SizeRatio()*100)))
+		style.FormatBytes(r.OutputSize), style.FormatBytes(r.InputSize), r.SizeRatio()*100)))
 	b.WriteString(row("Took", formatDuration(r.Elapsed)))
 
 	if m.notice != "" {

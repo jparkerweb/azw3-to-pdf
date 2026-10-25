@@ -6,10 +6,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/config"
-	"github.com/jparkerweb/azw3-to-pdf/internal/engine"
-	"github.com/jparkerweb/azw3-to-pdf/internal/pdfout"
-	"github.com/jparkerweb/azw3-to-pdf/internal/presets"
+	"github.com/jparkerweb/ebook-to-pdf/internal/config"
+	"github.com/jparkerweb/ebook-to-pdf/internal/engine"
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/ebook-to-pdf/internal/presets"
 )
 
 // Conversion flags.
@@ -40,12 +40,13 @@ var (
 	flagAutoRename   bool
 	flagSkipExisting bool
 
-	flagRecursive bool
-	flagJobs      int
-	flagNoTUI     bool
-	flagDryRun    bool
-	flagOpen      bool
-	flagStdin     bool
+	flagRecursive   bool
+	flagIncludeText bool
+	flagJobs        int
+	flagNoTUI       bool
+	flagDryRun      bool
+	flagOpen        bool
+	flagStdin       bool
 )
 
 func registerRunFlags(cmd *cobra.Command) {
@@ -78,6 +79,7 @@ func registerRunFlags(cmd *cobra.Command) {
 	f.BoolVar(&flagSkipExisting, "skip-existing", false, "leave books whose PDF already exists alone")
 
 	f.BoolVarP(&flagRecursive, "recursive", "r", false, "search directories for books recursively")
+	f.BoolVar(&flagIncludeText, "include-text", false, "also convert .txt and .html files found when scanning folders")
 	f.IntVarP(&flagJobs, "jobs", "j", 1, "number of books to convert in parallel")
 	f.BoolVar(&flagNoTUI, "no-tui", false, "convert from the shell instead of opening the interface")
 	f.BoolVar(&flagDryRun, "dry-run", false, "report what would be written without writing it")
@@ -138,96 +140,110 @@ func resolvePreset(cfg *config.Config) presets.Preset {
 }
 
 // buildPDFOptions layers the config file and then the command line on top of
-// the chosen preset.
+// the chosen preset. The saved page size enters through the preset rather than
+// as a config override, so that the size presets keep their own size.
 func buildPDFOptions(cmd *cobra.Command, cfg *config.Config, preset presets.Preset) (pdfout.Options, error) {
-	opts, err := preset.Options()
+	saved := ""
+	if cfg != nil && cfg.Layout.PageSize != "" {
+		if _, err := pdfout.LookupPageSize(cfg.Layout.PageSize); err != nil {
+			return pdfout.Options{}, fmt.Errorf("layout.page_size in %s: %w", cfg.Path(), err)
+		}
+		saved = cfg.Layout.PageSize
+	}
+	opts, err := preset.OptionsWithPageSize(saved)
 	if err != nil {
 		return opts, err
 	}
 
 	if cfg != nil {
-		l := cfg.Layout
-		if l.PageSize != "" {
-			size, err := pdfout.LookupPageSize(l.PageSize)
-			if err != nil {
-				return opts, err
-			}
-			opts.PageSize = size
-		}
-		if l.MarginMM > 0 {
-			opts.Margins = pdfout.UniformMargins(l.MarginMM)
-		}
-		if l.Font != "" {
-			opts.Font = l.Font
-		}
-		if l.FontSize > 0 {
-			opts.FontSize = l.FontSize
-		}
-		if l.LineSpacing > 0 {
-			opts.LineSpacing = l.LineSpacing
-		}
-		applyBool(&opts.Images, l.Images)
-		applyBool(&opts.Cover, l.Cover)
-		applyBool(&opts.TitlePage, l.TitlePage)
-		applyBool(&opts.PageNumbers, l.PageNumbers)
-		applyBool(&opts.Bookmarks, l.Bookmarks)
+		opts = opts.ApplyOverrides(configOverrides(cfg.Layout))
 	}
 
-	if flagPageSize != "" {
-		size, err := pdfout.LookupPageSize(flagPageSize)
-		if err != nil {
-			return opts, err
-		}
-		opts.PageSize = size
+	fromFlags, err := flagOverrides(cmd)
+	if err != nil {
+		return opts, err
 	}
-	if cmd.Flags().Changed("margin") {
-		opts.Margins = pdfout.UniformMargins(flagMargin)
-	}
-	if flagFont != "" {
-		opts.Font = flagFont
-	}
-	if flagFontSize > 0 {
-		opts.FontSize = flagFontSize
-	}
-	if flagLineSpacing > 0 {
-		opts.LineSpacing = flagLineSpacing
-	}
-	if flagJustify {
-		opts.Justify = true
-	}
-	if flagNoJustify {
-		opts.Justify = false
-	}
-	if flagNoImages {
-		opts.Images = false
-	}
-	if flagNoCover {
-		opts.Cover = false
-	}
-	if flagNoTitlePage {
-		opts.TitlePage = false
-	}
-	if flagNoPageNumbers {
-		opts.PageNumbers = false
-	}
-	if flagRunningHeader {
-		opts.RunningHeader = true
-	}
-	if flagNoBookmarks {
-		opts.Bookmarks = false
-	}
-	if flagNoBreaks {
-		opts.ChapterBreaks = false
-	}
+	opts = opts.ApplyOverrides(fromFlags)
 
 	opts.Normalize()
 	return opts, nil
 }
 
-func applyBool(dst *bool, src *bool) {
-	if src != nil {
-		*dst = *src
+// configOverrides turns the config file's layout section into overrides. A
+// zero number or empty string means "not set" in the file, unlike the bools,
+// which are pointers so that false can be written down.
+func configOverrides(l config.LayoutConfig) pdfout.OptionsOverrides {
+	var o pdfout.OptionsOverrides
+	if l.MarginMM > 0 {
+		o.Margins = pdfout.Ptr(pdfout.UniformMargins(l.MarginMM))
 	}
+	if l.Font != "" {
+		o.Font = &l.Font
+	}
+	if l.FontSize > 0 {
+		o.FontSize = &l.FontSize
+	}
+	if l.LineSpacing > 0 {
+		o.LineSpacing = &l.LineSpacing
+	}
+	o.Images = l.Images
+	o.Cover = l.Cover
+	o.TitlePage = l.TitlePage
+	o.PageNumbers = l.PageNumbers
+	o.Bookmarks = l.Bookmarks
+	return o
+}
+
+// flagOverrides turns the flags the user actually passed into overrides.
+func flagOverrides(cmd *cobra.Command) (pdfout.OptionsOverrides, error) {
+	var o pdfout.OptionsOverrides
+	if flagPageSize != "" {
+		size, err := pdfout.LookupPageSize(flagPageSize)
+		if err != nil {
+			return o, err
+		}
+		o.PageSize = &size
+	}
+	if cmd.Flags().Changed("margin") {
+		o.Margins = pdfout.Ptr(pdfout.UniformMargins(flagMargin))
+	}
+	if flagFont != "" {
+		o.Font = &flagFont
+	}
+	if flagFontSize > 0 {
+		o.FontSize = &flagFontSize
+	}
+	if flagLineSpacing > 0 {
+		o.LineSpacing = &flagLineSpacing
+	}
+	if flagJustify {
+		o.Justify = pdfout.Ptr(true)
+	}
+	if flagNoJustify {
+		o.Justify = pdfout.Ptr(false)
+	}
+	if flagNoImages {
+		o.Images = pdfout.Ptr(false)
+	}
+	if flagNoCover {
+		o.Cover = pdfout.Ptr(false)
+	}
+	if flagNoTitlePage {
+		o.TitlePage = pdfout.Ptr(false)
+	}
+	if flagNoPageNumbers {
+		o.PageNumbers = pdfout.Ptr(false)
+	}
+	if flagRunningHeader {
+		o.RunningHeader = pdfout.Ptr(true)
+	}
+	if flagNoBookmarks {
+		o.Bookmarks = pdfout.Ptr(false)
+	}
+	if flagNoBreaks {
+		o.ChapterBreaks = pdfout.Ptr(false)
+	}
+	return o, nil
 }
 
 // buildOutputOptions resolves where the PDFs go.

@@ -6,10 +6,10 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/ebook"
-	"github.com/jparkerweb/azw3-to-pdf/internal/presets"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/messages"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/style"
+	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
+	"github.com/jparkerweb/ebook-to-pdf/internal/presets"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/messages"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 // PresetsModel lets the reader pick a layout.
@@ -17,6 +17,7 @@ type PresetsModel struct {
 	list        []presets.Preset
 	cursor      int
 	recommended string
+	savedSize   string
 	width       int
 	height      int
 }
@@ -88,6 +89,28 @@ func (m PresetsModel) Update(msg tea.Msg) (style.ScreenModel, tea.Cmd) {
 	return m, nil
 }
 
+// FooterHint is the key hint line shown while this screen is current.
+func (m PresetsModel) FooterHint() string {
+	return "up/down: browse  |  enter: use preset  |  esc: back"
+}
+
+// Bindings lists this screen's help-overlay entries.
+func (m PresetsModel) Bindings() [][2]string {
+	return [][2]string{
+		{"up/down", "Move through the presets"},
+		{"enter", "Use this preset"},
+		{"r", "Use the recommended preset"},
+	}
+}
+
+// PushState loads the shared book and preset into the screen.
+func (m PresetsModel) PushState(state style.SharedState) style.ScreenModel {
+	m.SetBook(state.Book)
+	m.SetPreset(state.Preset)
+	m.savedSize = state.SavedPageSize
+	return m
+}
+
 // View renders the preset list.
 func (m PresetsModel) View() string {
 	var b strings.Builder
@@ -106,10 +129,10 @@ func (m PresetsModel) View() string {
 			badge = " " + style.BadgeStyle().Render("suggested")
 		}
 		fmt.Fprintf(&b, "%s%-16s%s\n", marker, name, badge)
-		b.WriteString(style.MutedStyle().Render("    " + style.Truncate(p.Summary(), maxInt(m.width-6, 20))))
+		b.WriteString(style.MutedStyle().Render("    " + style.Truncate(p.SummaryFor(m.savedSize), max(m.width-6, 20))))
 		b.WriteString("\n")
 		if i == m.cursor {
-			b.WriteString(style.AccentStyle().Render("    " + style.Truncate(p.Description, maxInt(m.width-6, 20))))
+			b.WriteString(style.AccentStyle().Render("    " + style.Truncate(p.Description, max(m.width-6, 20))))
 			b.WriteString("\n")
 		}
 		b.WriteString("\n")

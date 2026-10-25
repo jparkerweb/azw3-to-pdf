@@ -7,10 +7,10 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/ebook"
-	"github.com/jparkerweb/azw3-to-pdf/internal/htmldoc"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/messages"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/style"
+	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
+	"github.com/jparkerweb/ebook-to-pdf/internal/htmldoc"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/messages"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 // InfoModel shows what was found inside the chosen book.
@@ -73,28 +73,30 @@ func (m InfoModel) View() string {
 	b := m.book
 
 	var sb strings.Builder
-	sb.WriteString(style.TitleStyle().Render(style.Truncate(b.Title, maxInt(m.width-4, 20))))
+	sb.WriteString(style.TitleStyle().Render(style.Truncate(b.Title, max(m.width-4, 20))))
 	sb.WriteString("\n")
 	sb.WriteString(style.SubtitleStyle().Render(b.AuthorLine()))
 	sb.WriteString("\n\n")
 
-	sb.WriteString(row("File", filepath.Base(b.Path)))
-	sb.WriteString(row("Size", formatBytes(b.FileSize)))
-	sb.WriteString(row("Format", b.Format))
-	sb.WriteString(row("Compression", b.Compression))
-	if b.Publisher != "" {
-		sb.WriteString(row("Publisher", b.Publisher))
+	// Most formats leave some fields blank (only MOBI has a compression
+	// scheme), so an empty value drops its row rather than showing a gap.
+	add := func(label, value string) {
+		if value != "" {
+			sb.WriteString(row(label, value))
+		}
 	}
-	if b.Published != "" {
-		sb.WriteString(row("Published", b.Published))
+	add("File", filepath.Base(b.Path))
+	add("Size", style.FormatBytes(b.FileSize))
+	add("Format", b.Format)
+	add("Compression", b.Compression)
+	if b.Paged {
+		add("Layout", "fixed pages")
 	}
-	if b.Language != "" {
-		sb.WriteString(row("Language", b.Language))
-	}
-	if b.ISBN != "" {
-		sb.WriteString(row("ISBN", b.ISBN))
-	}
-	sb.WriteString(row("Content", fmt.Sprintf("%s of markup, %d blocks", formatBytes(int64(b.TextBytes)), m.blocks)))
+	add("Publisher", b.Publisher)
+	add("Published", b.Published)
+	add("Language", b.Language)
+	add("ISBN", b.ISBN)
+	sb.WriteString(row("Content", fmt.Sprintf("%s of markup, %d blocks", style.FormatBytes(int64(b.TextBytes)), m.blocks)))
 
 	images := fmt.Sprintf("%d embedded", len(b.Resources))
 	if b.Cover != nil {
@@ -103,12 +105,12 @@ func (m InfoModel) View() string {
 	sb.WriteString(row("Images", images))
 
 	if len(b.Subjects) > 0 {
-		sb.WriteString(row("Subjects", style.Truncate(strings.Join(b.Subjects, ", "), maxInt(m.width-18, 20))))
+		sb.WriteString(row("Subjects", style.Truncate(strings.Join(b.Subjects, ", "), max(m.width-18, 20))))
 	}
 
 	if b.Description != "" {
 		sb.WriteString("\n")
-		sb.WriteString(style.MutedStyle().Render(wrap(b.Description, maxInt(m.width-4, 30), 6)))
+		sb.WriteString(style.MutedStyle().Render(wrap(b.Description, max(m.width-4, 30), 6)))
 		sb.WriteString("\n")
 	}
 
@@ -117,7 +119,7 @@ func (m InfoModel) View() string {
 		sb.WriteString(style.AccentStyle().Render("Chapters found"))
 		sb.WriteString("\n")
 		for _, h := range m.headings {
-			sb.WriteString(style.MutedStyle().Render("  · " + style.Truncate(h, maxInt(m.width-8, 20))))
+			sb.WriteString(style.MutedStyle().Render("  · " + style.Truncate(h, max(m.width-8, 20))))
 			sb.WriteString("\n")
 		}
 	}
@@ -127,6 +129,25 @@ func (m InfoModel) View() string {
 	sb.WriteString(style.KeyHintStyle().Render("c") + style.MutedStyle().Render(" convert with current settings"))
 	sb.WriteString("\n")
 	return sb.String()
+}
+
+// FooterHint is the key hint line shown while this screen is current.
+func (m InfoModel) FooterHint() string {
+	return "enter: choose layout  |  c: convert now  |  esc: back"
+}
+
+// Bindings lists this screen's help-overlay entries.
+func (m InfoModel) Bindings() [][2]string {
+	return [][2]string{
+		{"enter", "Choose a layout preset"},
+		{"c", "Convert with the current settings"},
+	}
+}
+
+// PushState loads the shared book into the screen.
+func (m InfoModel) PushState(state style.SharedState) style.ScreenModel {
+	m.SetBook(state.Book)
+	return m
 }
 
 // wrap hard-wraps text to a width, stopping after a number of lines.

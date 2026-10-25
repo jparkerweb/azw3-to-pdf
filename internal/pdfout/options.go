@@ -36,7 +36,7 @@ var pageSizes = map[string]PageSize{
 func LookupPageSize(name string) (PageSize, error) {
 	key := strings.ToLower(strings.TrimSpace(name))
 	if key == "" {
-		return pageSizes["a5"], nil
+		return pageSizes["letter"], nil
 	}
 	if ps, ok := pageSizes[key]; ok {
 		return ps, nil
@@ -124,10 +124,118 @@ type Options struct {
 	ChapterBreaks bool // honour the book's own page breaks
 }
 
+// OptionsOverrides is a partial Options: a nil field is "not set" and leaves
+// the base value alone, a non-nil field wins even when it points at a zero
+// value. Plain values cannot say that, because false, 0 and "" are all
+// meaningful here (a config file that turns images off must beat a preset that
+// turns them on).
+//
+// Every Options field needs a matching field here, a line in ApplyOverrides
+// and a line in OverridesFrom. TestOverridesCoverEveryOption fails if one is
+// missed, so a new layout knob is added in this file rather than in each
+// consumer.
+type OptionsOverrides struct {
+	PageSize *PageSize
+	Margins  *Margins
+
+	Font        *string
+	FontSize    *float64
+	LineSpacing *float64
+	Justify     *bool
+
+	ParagraphSpacing *float64
+	FirstLineIndent  *float64
+
+	Images        *bool
+	Cover         *bool
+	TitlePage     *bool
+	PageNumbers   *bool
+	RunningHeader *bool
+	Bookmarks     *bool
+	ChapterBreaks *bool
+}
+
+// Ptr returns a pointer to v, for building an OptionsOverrides inline.
+func Ptr[T any](v T) *T { return &v }
+
+// ApplyOverrides returns o with every field set in p replaced. The receiver is
+// not modified. It does not normalize: callers do that once, after the last
+// layer (preset, config, flags) has been applied.
+func (o Options) ApplyOverrides(p OptionsOverrides) Options {
+	if p.PageSize != nil {
+		o.PageSize = *p.PageSize
+	}
+	if p.Margins != nil {
+		o.Margins = *p.Margins
+	}
+	if p.Font != nil {
+		o.Font = *p.Font
+	}
+	if p.FontSize != nil {
+		o.FontSize = *p.FontSize
+	}
+	if p.LineSpacing != nil {
+		o.LineSpacing = *p.LineSpacing
+	}
+	if p.Justify != nil {
+		o.Justify = *p.Justify
+	}
+	if p.ParagraphSpacing != nil {
+		o.ParagraphSpacing = *p.ParagraphSpacing
+	}
+	if p.FirstLineIndent != nil {
+		o.FirstLineIndent = *p.FirstLineIndent
+	}
+	if p.Images != nil {
+		o.Images = *p.Images
+	}
+	if p.Cover != nil {
+		o.Cover = *p.Cover
+	}
+	if p.TitlePage != nil {
+		o.TitlePage = *p.TitlePage
+	}
+	if p.PageNumbers != nil {
+		o.PageNumbers = *p.PageNumbers
+	}
+	if p.RunningHeader != nil {
+		o.RunningHeader = *p.RunningHeader
+	}
+	if p.Bookmarks != nil {
+		o.Bookmarks = *p.Bookmarks
+	}
+	if p.ChapterBreaks != nil {
+		o.ChapterBreaks = *p.ChapterBreaks
+	}
+	return o
+}
+
+// OverridesFrom sets every field, for callers that hold a complete Options
+// (the layout screen) and want it applied through the same path.
+func OverridesFrom(o Options) OptionsOverrides {
+	return OptionsOverrides{
+		PageSize:         Ptr(o.PageSize),
+		Margins:          Ptr(o.Margins),
+		Font:             Ptr(o.Font),
+		FontSize:         Ptr(o.FontSize),
+		LineSpacing:      Ptr(o.LineSpacing),
+		Justify:          Ptr(o.Justify),
+		ParagraphSpacing: Ptr(o.ParagraphSpacing),
+		FirstLineIndent:  Ptr(o.FirstLineIndent),
+		Images:           Ptr(o.Images),
+		Cover:            Ptr(o.Cover),
+		TitlePage:        Ptr(o.TitlePage),
+		PageNumbers:      Ptr(o.PageNumbers),
+		RunningHeader:    Ptr(o.RunningHeader),
+		Bookmarks:        Ptr(o.Bookmarks),
+		ChapterBreaks:    Ptr(o.ChapterBreaks),
+	}
+}
+
 // DefaultOptions returns a sensible reading layout.
 func DefaultOptions() Options {
 	return Options{
-		PageSize:         pageSizes["a5"],
+		PageSize:         pageSizes["letter"],
 		Margins:          UniformMargins(15),
 		Font:             string(FontSerif),
 		FontSize:         11,
@@ -148,7 +256,7 @@ func DefaultOptions() Options {
 // Normalize clamps values that would produce an unreadable or broken page.
 func (o *Options) Normalize() {
 	if o.PageSize.Width <= 0 || o.PageSize.Height <= 0 {
-		o.PageSize = pageSizes["a5"]
+		o.PageSize = pageSizes["letter"]
 	}
 	if o.FontSize < 5 {
 		o.FontSize = 5

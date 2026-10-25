@@ -9,8 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/pdfout"
-	"github.com/jparkerweb/azw3-to-pdf/internal/presets"
+	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/ebook-to-pdf/internal/presets"
 )
 
 // writeTestBook writes an uncompressed MOBI 6 file, which is the smallest
@@ -158,6 +159,20 @@ func TestConvertRejectsUnreadableInput(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "broken.azw3") {
 		t.Errorf("the error does not name the file: %v", err)
+	}
+}
+
+func TestPDFOptionsForPagedBooks(t *testing.T) {
+	opts := mustOptions(t)
+	opts.Cover, opts.TitlePage = true, true
+
+	got := pdfOptionsFor(&ebook.Book{Paged: true}, opts)
+	if got.Cover || got.TitlePage {
+		t.Errorf("a paged book kept Cover=%v TitlePage=%v, want both off", got.Cover, got.TitlePage)
+	}
+	got = pdfOptionsFor(&ebook.Book{}, opts)
+	if !got.Cover || !got.TitlePage {
+		t.Errorf("an unpaged book got Cover=%v TitlePage=%v, want both kept on", got.Cover, got.TitlePage)
 	}
 }
 

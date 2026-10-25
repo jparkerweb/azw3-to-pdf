@@ -1,16 +1,16 @@
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 version: 2
 
-project_name: azw3-to-pdf
+project_name: ebook-to-pdf
 
 before:
   hooks:
     - go mod tidy
 
 builds:
-  - id: azw3-to-pdf
-    main: ./cmd/azw3-to-pdf/
-    binary: azw3-to-pdf
+  - id: ebook-to-pdf
+    main: ./cmd/ebook-to-pdf/
+    binary: ebook-to-pdf
     env:
       - CGO_ENABLED=0
     ldflags:
@@ -68,7 +68,7 @@ changelog:
 release:
   github:
     owner: jparkerweb
-    name: azw3-to-pdf
+    name: ebook-to-pdf
   draft: false
   prerelease: auto
   name_template: "v{{.Version}}"

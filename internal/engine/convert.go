@@ -1,4 +1,4 @@
-// Package engine converts Kindle books to PDF and manages batches of those
+// Package engine converts ebooks to PDF and manages batches of those
 // conversions.
 package engine
 
@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/ebook"
-	"github.com/jparkerweb/azw3-to-pdf/internal/htmldoc"
-	"github.com/jparkerweb/azw3-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
+	"github.com/jparkerweb/ebook-to-pdf/internal/htmldoc"
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
 )
 
 // Stage identifies which part of a conversion is running.
@@ -82,7 +82,18 @@ func (r *Result) SizeRatio() float64 {
 	return float64(r.OutputSize) / float64(r.InputSize)
 }
 
-// Convert reads a Kindle book and writes a PDF. Progress callbacks are
+// pdfOptionsFor adjusts the layout to the book. A pre-paginated book (a comic,
+// a fixed-layout EPUB) opens on its own cover page, so adding a cover and a
+// title page in front of it would only repeat it.
+func pdfOptionsFor(book *ebook.Book, opts pdfout.Options) pdfout.Options {
+	if book.Paged {
+		opts.Cover = false
+		opts.TitlePage = false
+	}
+	return opts
+}
+
+// Convert reads an ebook and writes a PDF. Progress callbacks are
 // optional and are made from the calling goroutine.
 func Convert(ctx context.Context, opts Options, onProgress func(Progress)) (*Result, error) {
 	started := time.Now()
@@ -114,7 +125,7 @@ func Convert(ctx context.Context, opts Options, onProgress func(Progress)) (*Res
 
 	// Render to a temporary file in the destination directory, then move it
 	// into place, so an interrupted run never leaves a half-written PDF.
-	tmp, err := os.CreateTemp(filepath.Dir(outPath), ".azw3topdf-*.tmp")
+	tmp, err := os.CreateTemp(filepath.Dir(outPath), ".ebooktopdf-*.tmp")
 	if err != nil {
 		return nil, fmt.Errorf("creating temporary file: %w", err)
 	}
@@ -137,7 +148,7 @@ func Convert(ctx context.Context, opts Options, onProgress func(Progress)) (*Res
 	images := imageLookup(book)
 
 	report(Progress{Stage: StageRender, Percent: 0.15, Blocks: len(doc.Blocks)})
-	res, err := pdfout.Render(ctx, tmp, doc, meta, images, opts.PDF, func(p pdfout.Progress) {
+	res, err := pdfout.Render(ctx, tmp, doc, meta, images, pdfOptionsFor(book, opts.PDF), func(p pdfout.Progress) {
 		frac := 0.0
 		if p.Blocks > 0 {
 			frac = float64(p.Block) / float64(p.Blocks)

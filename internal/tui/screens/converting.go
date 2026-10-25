@@ -9,10 +9,10 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/ebook"
-	"github.com/jparkerweb/azw3-to-pdf/internal/engine"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/messages"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/style"
+	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
+	"github.com/jparkerweb/ebook-to-pdf/internal/engine"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/messages"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 // ConvertingModel shows progress while one book is converted.
@@ -129,7 +129,7 @@ func (m ConvertingModel) View() string {
 	if m.err != nil {
 		b.WriteString(style.TitleStyle().Render("That did not work"))
 		b.WriteString("\n")
-		b.WriteString(style.ErrorStyle().Render(wrap(m.err.Error(), maxInt(m.width-4, 30), 8)))
+		b.WriteString(style.ErrorStyle().Render(wrap(m.err.Error(), max(m.width-4, 30), 8)))
 		b.WriteString("\n\n")
 		b.WriteString(style.KeyHintStyle().Render("enter") + style.MutedStyle().Render(" go back and try different settings"))
 		b.WriteString("\n")
@@ -138,7 +138,7 @@ func (m ConvertingModel) View() string {
 
 	title := "Converting"
 	if m.book != nil {
-		title = style.Truncate(m.book.Title, maxInt(m.width-16, 20))
+		title = style.Truncate(m.book.Title, max(m.width-16, 20))
 	}
 	b.WriteString(style.TitleStyle().Render(title))
 	b.WriteString("\n")
@@ -170,6 +170,19 @@ func (m ConvertingModel) View() string {
 	b.WriteString(style.MutedStyle().Render("esc cancels; the PDF is only written once it is complete."))
 	b.WriteString("\n")
 	return b.String()
+}
+
+// FooterHint is the key hint line shown while this screen is current.
+func (m ConvertingModel) FooterHint() string { return "esc: cancel  |  ctrl+c: quit" }
+
+// Bindings lists this screen's help-overlay entries: none beyond the global
+// bindings.
+func (m ConvertingModel) Bindings() [][2]string { return nil }
+
+// PushState loads the shared book into the screen.
+func (m ConvertingModel) PushState(state style.SharedState) style.ScreenModel {
+	m.SetBook(state.Book)
+	return m
 }
 
 // Book reports the book being converted, used by the completion screen.

@@ -10,12 +10,12 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/ebook"
-	"github.com/jparkerweb/azw3-to-pdf/internal/engine"
-	"github.com/jparkerweb/azw3-to-pdf/internal/pdfout"
-	"github.com/jparkerweb/azw3-to-pdf/internal/presets"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/messages"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/style"
+	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
+	"github.com/jparkerweb/ebook-to-pdf/internal/engine"
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/ebook-to-pdf/internal/presets"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/messages"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 // QueueItem is one book waiting to be converted.
@@ -66,6 +66,7 @@ type BatchQueueModel struct {
 	loading bool
 	frame   int
 	preset  presets.Preset
+	saved   string
 	width   int
 	height  int
 }
@@ -137,6 +138,27 @@ func (m BatchQueueModel) Update(msg tea.Msg) (style.ScreenModel, tea.Cmd) {
 	return m, nil
 }
 
+// FooterHint is the key hint line shown while this screen is current.
+func (m BatchQueueModel) FooterHint() string {
+	return "enter: start  |  d: remove  |  p: preset  |  l: layout  |  esc: back"
+}
+
+// Bindings lists this screen's help-overlay entries.
+func (m BatchQueueModel) Bindings() [][2]string {
+	return [][2]string{
+		{"up/down", "Move through the queue"},
+		{"d", "Remove the highlighted book"},
+		{"enter", "Start the batch"},
+	}
+}
+
+// PushState loads the shared preset into the screen.
+func (m BatchQueueModel) PushState(state style.SharedState) style.ScreenModel {
+	m.SetPreset(state.Preset)
+	m.saved = state.SavedPageSize
+	return m
+}
+
 func (m BatchQueueModel) readablePaths() []string {
 	var out []string
 	for _, item := range m.items {
@@ -168,17 +190,17 @@ func (m BatchQueueModel) View() string {
 	var total int64
 	for i, item := range m.items {
 		marker := "  "
-		name := style.ValueStyle().Render(style.Truncate(item.Label(), maxInt(m.width-24, 20)))
+		name := style.ValueStyle().Render(style.Truncate(item.Label(), max(m.width-24, 20)))
 		if i == m.cursor {
 			marker = style.SelectedStyle().Render("> ")
-			name = style.SelectedStyle().Render(style.Truncate(item.Label(), maxInt(m.width-24, 20)))
+			name = style.SelectedStyle().Render(style.Truncate(item.Label(), max(m.width-24, 20)))
 		}
 		b.WriteString(marker + name + "\n")
 
-		detail := fmt.Sprintf("%s · %d images", formatBytes(item.Size), item.Images)
+		detail := fmt.Sprintf("%s · %d images", style.FormatBytes(item.Size), item.Images)
 		if item.Err != nil {
 			detail = "cannot be read: " + item.Err.Error()
-			b.WriteString(style.ErrorStyle().Render("    " + style.Truncate(detail, maxInt(m.width-6, 20))))
+			b.WriteString(style.ErrorStyle().Render("    " + style.Truncate(detail, max(m.width-6, 20))))
 		} else {
 			total += item.Size
 			b.WriteString(style.MutedStyle().Render("    " + detail))
@@ -187,8 +209,8 @@ func (m BatchQueueModel) View() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(row("Books", fmt.Sprintf("%d queued, %s in total", len(m.items), formatBytes(total))))
-	b.WriteString(row("Layout", m.preset.Name+" · "+m.preset.Summary()))
+	b.WriteString(row("Books", fmt.Sprintf("%d queued, %s in total", len(m.items), style.FormatBytes(total))))
+	b.WriteString(row("Layout", m.preset.Name+" · "+m.preset.SummaryFor(m.saved)))
 
 	b.WriteString("\n")
 	b.WriteString(style.KeyHintStyle().Render("enter") + style.MutedStyle().Render(" start    "))
@@ -206,6 +228,13 @@ type BatchResult struct {
 	Err    error
 }
 
+// batchConcurrency keeps the interface converting one book at a time, so the
+// progress screen has a single "now converting" book to show.
+const batchConcurrency = 1
+
+// runBatch is engine.RunBatch, replaceable in tests.
+var runBatch = engine.RunBatch
+
 // BatchProgressModel converts a queue one book at a time.
 type BatchProgressModel struct {
 	paths   []string
@@ -218,7 +247,7 @@ type BatchProgressModel struct {
 
 	updates chan messages.BatchProgressMsg
 	events  chan tea.Msg
-	cancel  context.CancelFunc
+	stop    chan struct{}
 
 	width  int
 	height int
@@ -232,36 +261,36 @@ func (m BatchProgressModel) Init() tea.Cmd { return nil }
 
 // Start converts every path in turn.
 func (m *BatchProgressModel) Start(paths []string, out engine.OutputOptions, pdf pdfout.Options) tea.Cmd {
-	ctx, cancel := context.WithCancel(context.Background())
-
 	m.paths = paths
 	m.results = nil
 	m.index = 0
 	m.started = time.Now()
 	m.stopped = false
-	m.cancel = cancel
+	m.stop = make(chan struct{})
 	m.updates = make(chan messages.BatchProgressMsg, 1)
 	m.events = make(chan tea.Msg, len(paths)+1)
 
-	updates, events := m.updates, m.events
+	// Each book gets its own destination, so --output is ignored here.
+	out.Path = ""
+
+	updates, events, stop := m.updates, m.events, m.stop
 	go func() {
 		defer close(updates)
-		for i, path := range paths {
-			if ctx.Err() != nil {
-				break
-			}
-			// Each book gets its own destination, so --output is ignored here.
-			opts := engine.Options{Input: path, Output: out, PDF: pdf}
-			opts.Output.Path = ""
-
-			res, err := engine.Convert(ctx, opts, func(p engine.Progress) {
+		runBatch(context.Background(), paths, engine.BatchOptions{
+			Output:      out,
+			PDF:         pdf,
+			Concurrency: batchConcurrency,
+			Stop:        stop,
+			OnProgress: func(i int, p engine.Progress) {
 				select {
 				case updates <- messages.BatchProgressMsg{Index: i, Progress: p}:
 				default:
 				}
-			})
-			events <- messages.BatchItemDoneMsg{Index: i, Result: res, Err: err}
-		}
+			},
+			OnResult: func(r engine.BatchResult) {
+				events <- messages.BatchItemDoneMsg{Index: r.Index, Result: r.Result, Err: r.Err}
+			},
+		})
 		events <- messages.BatchDoneMsg{}
 	}()
 
@@ -281,6 +310,19 @@ func waitForBatchProgress(ch chan messages.BatchProgressMsg) tea.Cmd {
 func waitForEvent(ch chan tea.Msg) tea.Cmd {
 	return func() tea.Msg { return <-ch }
 }
+
+// FooterHint is the key hint line shown while this screen is current.
+func (m BatchProgressModel) FooterHint() string {
+	return "esc: stop after this book  |  ctrl+c: quit"
+}
+
+// Bindings lists this screen's help-overlay entries: none beyond the global
+// bindings.
+func (m BatchProgressModel) Bindings() [][2]string { return nil }
+
+// PushState does nothing: the batch progress screen carries no shared state
+// of its own, it is driven entirely by Start.
+func (m BatchProgressModel) PushState(style.SharedState) style.ScreenModel { return m }
 
 // Results reports what happened to each book.
 func (m BatchProgressModel) Results() []BatchResult { return m.results }
@@ -314,8 +356,8 @@ func (m BatchProgressModel) Update(msg tea.Msg) (style.ScreenModel, tea.Cmd) {
 	case tea.KeyPressMsg:
 		if msg.String() == "esc" && !m.stopped {
 			m.stopped = true
-			if m.cancel != nil {
-				m.cancel()
+			if m.stop != nil {
+				close(m.stop)
 			}
 			return m, status("Stopping after the current book")
 		}
@@ -344,7 +386,7 @@ func (m BatchProgressModel) View() string {
 	}
 
 	b.WriteString(style.AccentStyle().Render(fmt.Sprintf("%s  book %d of %d",
-		spinnerFrames[m.frame%len(spinnerFrames)], minInt(done+1, len(m.paths)), len(m.paths))))
+		spinnerFrames[m.frame%len(spinnerFrames)], min(done+1, len(m.paths)), len(m.paths))))
 	b.WriteString("\n\n")
 	b.WriteString("  " + bar(overall, width))
 	b.WriteString(style.ValueStyle().Render(fmt.Sprintf("  %3.0f%%", overall*100)))
@@ -352,7 +394,7 @@ func (m BatchProgressModel) View() string {
 
 	if m.index < len(m.paths) && done < len(m.paths) {
 		name := filepath.Base(m.paths[m.index])
-		b.WriteString(row("Now", style.Truncate(name, maxInt(m.width-18, 20))))
+		b.WriteString(row("Now", style.Truncate(name, max(m.width-18, 20))))
 		b.WriteString(row("Stage", m.current.Stage.String()))
 		if m.current.Page > 0 {
 			b.WriteString(row("Pages", fmt.Sprintf("%d", m.current.Page)))
@@ -368,7 +410,7 @@ func (m BatchProgressModel) View() string {
 			case errors.Is(r.Err, engine.ErrSkipped):
 				b.WriteString(style.WarningStyle().Render("  – " + name + " (already converted)"))
 			case r.Err != nil:
-				b.WriteString(style.ErrorStyle().Render("  x " + style.Truncate(name+": "+r.Err.Error(), maxInt(m.width-6, 20))))
+				b.WriteString(style.ErrorStyle().Render("  x " + style.Truncate(name+": "+r.Err.Error(), max(m.width-6, 20))))
 			default:
 				b.WriteString(style.SuccessStyle().Render(fmt.Sprintf("  ✓ %s (%d pages)", name, r.Result.Pages)))
 			}
@@ -432,6 +474,19 @@ func (m BatchCompleteModel) Update(msg tea.Msg) (style.ScreenModel, tea.Cmd) {
 	return m, nil
 }
 
+// FooterHint is the key hint line shown while this screen is current.
+func (m BatchCompleteModel) FooterHint() string {
+	return "f: open folder  |  n: new batch  |  q: quit"
+}
+
+// Bindings lists this screen's help-overlay entries: none beyond the global
+// bindings.
+func (m BatchCompleteModel) Bindings() [][2]string { return nil }
+
+// PushState does nothing: the batch summary is loaded via SetResults, not
+// the shared conversion state.
+func (m BatchCompleteModel) PushState(style.SharedState) style.ScreenModel { return m }
+
 func (m BatchCompleteModel) outputDir() string {
 	for _, r := range m.results {
 		if r.Err == nil && r.Result != nil {
@@ -471,10 +526,10 @@ func (m BatchCompleteModel) View() string {
 	b.WriteString("\n\n")
 
 	b.WriteString(row("Pages", fmt.Sprintf("%d in total", pages)))
-	b.WriteString(row("Written", formatBytes(bytes)))
+	b.WriteString(row("Written", style.FormatBytes(bytes)))
 	b.WriteString(row("Took", formatDuration(m.elapsed)))
 	if dir := m.outputDir(); dir != "" {
-		b.WriteString(row("Folder", style.Truncate(dir, maxInt(m.width-18, 20))))
+		b.WriteString(row("Folder", style.Truncate(dir, max(m.width-18, 20))))
 	}
 	b.WriteString("\n")
 
@@ -484,10 +539,10 @@ func (m BatchCompleteModel) View() string {
 		case errors.Is(r.Err, engine.ErrSkipped):
 			b.WriteString(style.WarningStyle().Render("  – " + name + " (already converted)"))
 		case r.Err != nil:
-			b.WriteString(style.ErrorStyle().Render("  x " + style.Truncate(name+": "+r.Err.Error(), maxInt(m.width-6, 20))))
+			b.WriteString(style.ErrorStyle().Render("  x " + style.Truncate(name+": "+r.Err.Error(), max(m.width-6, 20))))
 		default:
 			b.WriteString(style.SuccessStyle().Render(fmt.Sprintf("  ✓ %s", filepath.Base(r.Result.OutputPath))))
-			b.WriteString(style.MutedStyle().Render(fmt.Sprintf("  %d pages · %s", r.Result.Pages, formatBytes(r.Result.OutputSize))))
+			b.WriteString(style.MutedStyle().Render(fmt.Sprintf("  %d pages · %s", r.Result.Pages, style.FormatBytes(r.Result.OutputSize))))
 		}
 		b.WriteString("\n")
 	}
@@ -504,11 +559,4 @@ func (m BatchCompleteModel) View() string {
 	b.WriteString(style.KeyHintStyle().Render("q") + style.MutedStyle().Render(" quit"))
 	b.WriteString("\n")
 	return b.String()
-}
-
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
