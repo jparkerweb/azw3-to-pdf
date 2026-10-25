@@ -6,10 +6,10 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/ebook"
-	"github.com/jparkerweb/azw3-to-pdf/internal/presets"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/messages"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/style"
+	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
+	"github.com/jparkerweb/ebook-to-pdf/internal/presets"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/messages"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 // PresetsModel lets the reader pick a layout.
@@ -17,6 +17,7 @@ type PresetsModel struct {
 	list        []presets.Preset
 	cursor      int
 	recommended string
+	savedSize   string
 	width       int
 	height      int
 }
@@ -106,6 +107,7 @@ func (m PresetsModel) Bindings() [][2]string {
 func (m PresetsModel) PushState(state style.SharedState) style.ScreenModel {
 	m.SetBook(state.Book)
 	m.SetPreset(state.Preset)
+	m.savedSize = state.SavedPageSize
 	return m
 }
 
@@ -127,7 +129,7 @@ func (m PresetsModel) View() string {
 			badge = " " + style.BadgeStyle().Render("suggested")
 		}
 		fmt.Fprintf(&b, "%s%-16s%s\n", marker, name, badge)
-		b.WriteString(style.MutedStyle().Render("    " + style.Truncate(p.Summary(), maxInt(m.width-6, 20))))
+		b.WriteString(style.MutedStyle().Render("    " + style.Truncate(p.SummaryFor(m.savedSize), maxInt(m.width-6, 20))))
 		b.WriteString("\n")
 		if i == m.cursor {
 			b.WriteString(style.AccentStyle().Render("    " + style.Truncate(p.Description, maxInt(m.width-6, 20))))

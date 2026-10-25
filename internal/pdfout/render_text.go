@@ -3,7 +3,7 @@ package pdfout
 import (
 	"strings"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/htmldoc"
+	"github.com/jparkerweb/ebook-to-pdf/internal/htmldoc"
 )
 
 // word is one measured, styled token of a line.

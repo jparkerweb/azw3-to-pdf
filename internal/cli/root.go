@@ -32,9 +32,12 @@ var (
 // Execute runs the command line. It is the entry point used by main.
 func Execute() error {
 	root := &cobra.Command{
-		Use:   "azw3-to-pdf [book...]",
-		Short: "Turn Kindle books into PDFs.",
-		Long: "azw3-to-pdf converts Kindle books (.azw3, .azw, .mobi, .prc) into PDFs.\n\n" +
+		Use:   "ebook-to-pdf [book...]",
+		Short: "Turn ebooks into PDFs.",
+		Long: "ebook-to-pdf converts ebooks into PDFs: EPUB (.epub), Kindle (.azw3, .azw,\n" +
+			".mobi, .prc), comic archives (.cbz), FictionBook (.fb2, .fb2.zip), plain\n" +
+			"text (.txt) and HTML (.html, .htm). Folder scans skip text and HTML files\n" +
+			"unless --include-text is given.\n\n" +
 			"Run it with no arguments for the interactive browser, or pass files and\n" +
 			"--no-tui to convert straight from the shell. It needs no other software:\n" +
 			"the parser, layout engine and PDF writer are all built in.",

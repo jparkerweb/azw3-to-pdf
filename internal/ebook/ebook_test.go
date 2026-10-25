@@ -68,6 +68,7 @@ func TestSniffImage(t *testing.T) {
 		"png":  {0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a},
 		"gif":  []byte("GIF89a12"),
 		"bmp":  []byte("BM123456"),
+		"webp": []byte("RIFF\x24\x00\x00\x00WEBPVP8L"),
 		"":     []byte("FLIS0000"),
 	}
 	for want, data := range cases {
@@ -117,7 +118,7 @@ func TestDecodeRejectsNonKindleFiles(t *testing.T) {
 	if err == nil {
 		t.Fatal("Decode accepted a file that is not a Kindle book")
 	}
-	if !strings.Contains(err.Error(), "not a Kindle book") {
+	if !strings.Contains(err.Error(), "not a supported ebook") {
 		t.Errorf("error was %q, want it to explain the file is not a Kindle book", err)
 	}
 }

@@ -3,10 +3,10 @@ package style
 import (
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/ebook"
-	"github.com/jparkerweb/azw3-to-pdf/internal/engine"
-	"github.com/jparkerweb/azw3-to-pdf/internal/pdfout"
-	"github.com/jparkerweb/azw3-to-pdf/internal/presets"
+	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
+	"github.com/jparkerweb/ebook-to-pdf/internal/engine"
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/ebook-to-pdf/internal/presets"
 )
 
 // ScreenModel is what every screen in the interface implements. It mirrors
@@ -45,4 +45,8 @@ type SharedState struct {
 	PDF    pdfout.Options
 	Output engine.OutputOptions
 	Result *engine.Result
+
+	// SavedPageSize is the default page size from the config file, empty when
+	// none is saved, so preset summaries describe the size a preset renders at.
+	SavedPageSize string
 }

@@ -11,12 +11,12 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/config"
-	"github.com/jparkerweb/azw3-to-pdf/internal/ebook"
-	"github.com/jparkerweb/azw3-to-pdf/internal/engine"
-	"github.com/jparkerweb/azw3-to-pdf/internal/logging"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/style"
+	"github.com/jparkerweb/ebook-to-pdf/internal/config"
+	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
+	"github.com/jparkerweb/ebook-to-pdf/internal/engine"
+	"github.com/jparkerweb/ebook-to-pdf/internal/logging"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 // runCmd is the default command: convert books, interactively or not.
@@ -73,13 +73,18 @@ func collectInputs(args []string) ([]string, error) {
 		}
 		var found []string
 		if info.IsDir() {
-			found = engine.DiscoverBooks(p, flagRecursive)
+			found = engine.DiscoverBooks(p, flagRecursive, flagIncludeText)
 			if len(found) == 0 {
-				return nil, fmt.Errorf("no Kindle books found in %s", p)
+				// A folder of notes is the likely case here, so say what would
+				// convert them rather than only that nothing was found.
+				if !flagIncludeText && len(engine.DiscoverBooks(p, flagRecursive, true)) > 0 {
+					return nil, fmt.Errorf("no ebooks found in %s; it has .txt or .html files, add --include-text to convert them", p)
+				}
+				return nil, fmt.Errorf("no ebooks found in %s", p)
 			}
 		} else {
-			if !engine.IsBookFile(p) {
-				return nil, fmt.Errorf("%s is not a Kindle book (expected one of: %s)", filepath.Base(p), strings.Join(engine.BookExtensions, ", "))
+			if !engine.IsConvertible(p) {
+				return nil, fmt.Errorf("%s is not a supported ebook (expected one of: %s)", filepath.Base(p), strings.Join(engine.BookExtensions, ", "))
 			}
 			found = []string{p}
 		}
@@ -149,7 +154,7 @@ func runTUI(cmd *cobra.Command, inputs []string) error {
 
 // isInteractive reports whether it makes sense to draw a full-screen UI.
 func isInteractive() bool {
-	if os.Getenv("AZW3_TO_PDF_NO_TUI") != "" {
+	if os.Getenv("EBOOK_TO_PDF_NO_TUI") != "" {
 		return false
 	}
 	return term.IsTerminal(int(os.Stdout.Fd())) && term.IsTerminal(int(os.Stdin.Fd()))

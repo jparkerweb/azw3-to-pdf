@@ -8,8 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/ebook"
-	"github.com/jparkerweb/azw3-to-pdf/internal/htmldoc"
+	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
+	"github.com/jparkerweb/ebook-to-pdf/internal/htmldoc"
 )
 
 func probeCmd() *cobra.Command {
@@ -17,7 +17,7 @@ func probeCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:               "probe <book>",
-		Short:             "Inspect a Kindle book without converting it",
+		Short:             "Inspect an ebook without converting it",
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: completeBookFiles,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -42,6 +42,9 @@ func probeCmd() *cobra.Command {
 			row("ASIN", book.ASIN)
 			row("Subjects", strings.Join(book.Subjects, ", "))
 			row("Format", book.Format)
+			if book.Paged {
+				row("Layout", "fixed pages")
+			}
 			row("Compression", book.Compression)
 			row("Encoding", book.Encoding)
 			row("File size", humanBytes(book.FileSize))

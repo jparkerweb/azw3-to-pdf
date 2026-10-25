@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/pdfout"
-	"github.com/jparkerweb/azw3-to-pdf/internal/presets"
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/ebook-to-pdf/internal/presets"
 )
 
 func presetsCmd() *cobra.Command {

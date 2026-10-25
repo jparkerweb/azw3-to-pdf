@@ -10,12 +10,12 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/ebook"
-	"github.com/jparkerweb/azw3-to-pdf/internal/engine"
-	"github.com/jparkerweb/azw3-to-pdf/internal/pdfout"
-	"github.com/jparkerweb/azw3-to-pdf/internal/presets"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/messages"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/style"
+	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
+	"github.com/jparkerweb/ebook-to-pdf/internal/engine"
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/ebook-to-pdf/internal/presets"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/messages"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 // QueueItem is one book waiting to be converted.
@@ -66,6 +66,7 @@ type BatchQueueModel struct {
 	loading bool
 	frame   int
 	preset  presets.Preset
+	saved   string
 	width   int
 	height  int
 }
@@ -154,6 +155,7 @@ func (m BatchQueueModel) Bindings() [][2]string {
 // PushState loads the shared preset into the screen.
 func (m BatchQueueModel) PushState(state style.SharedState) style.ScreenModel {
 	m.SetPreset(state.Preset)
+	m.saved = state.SavedPageSize
 	return m
 }
 
@@ -208,7 +210,7 @@ func (m BatchQueueModel) View() string {
 
 	b.WriteString("\n")
 	b.WriteString(row("Books", fmt.Sprintf("%d queued, %s in total", len(m.items), formatBytes(total))))
-	b.WriteString(row("Layout", m.preset.Name+" · "+m.preset.Summary()))
+	b.WriteString(row("Layout", m.preset.Name+" · "+m.preset.SummaryFor(m.saved)))
 
 	b.WriteString("\n")
 	b.WriteString(style.KeyHintStyle().Render("enter") + style.MutedStyle().Render(" start    "))

@@ -36,7 +36,7 @@ var pageSizes = map[string]PageSize{
 func LookupPageSize(name string) (PageSize, error) {
 	key := strings.ToLower(strings.TrimSpace(name))
 	if key == "" {
-		return pageSizes["a5"], nil
+		return pageSizes["letter"], nil
 	}
 	if ps, ok := pageSizes[key]; ok {
 		return ps, nil
@@ -235,7 +235,7 @@ func OverridesFrom(o Options) OptionsOverrides {
 // DefaultOptions returns a sensible reading layout.
 func DefaultOptions() Options {
 	return Options{
-		PageSize:         pageSizes["a5"],
+		PageSize:         pageSizes["letter"],
 		Margins:          UniformMargins(15),
 		Font:             string(FontSerif),
 		FontSize:         11,
@@ -256,7 +256,7 @@ func DefaultOptions() Options {
 // Normalize clamps values that would produce an unreadable or broken page.
 func (o *Options) Normalize() {
 	if o.PageSize.Width <= 0 || o.PageSize.Height <= 0 {
-		o.PageSize = pageSizes["a5"]
+		o.PageSize = pageSizes["letter"]
 	}
 	if o.FontSize < 5 {
 		o.FontSize = 5

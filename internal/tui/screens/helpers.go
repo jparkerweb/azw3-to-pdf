@@ -8,9 +8,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/ebook"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/messages"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/style"
+	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/messages"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 // formatBytes renders a byte count for humans.

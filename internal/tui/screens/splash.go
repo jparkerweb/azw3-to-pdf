@@ -6,8 +6,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/messages"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/style"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/messages"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 // splashDwell is how long the welcome screen stays up on its own.
@@ -15,12 +15,12 @@ const splashDwell = 1500 * time.Millisecond
 
 // logo is the wordmark shown on the welcome screen.
 var logo = []string{
-	`                     _____    __                     ______`,
-	`  ____ ______      _|__  /   / /_____     ____  ____/ / __/`,
-	` / __ '/_  / | /| / //_ <   / __/ __ \   / __ \/ __  / /_`,
-	`/ /_/ / / /| |/ |/ /__/ /  / /_/ /_/ /  / /_/ / /_/ / __/`,
-	`\__,_/ /___/__/|__/____/   \__/\____/  / .___/\__,_/_/`,
-	`                                      /_/`,
+	`        __                __      __                     ______`,
+	`  ___  / /_  ____  ____  / /__   / /_____     ____  ____/ / __/`,
+	` / _ \/ __ \/ __ \/ __ \/ //_/  / __/ __ \   / __ \/ __  / /_`,
+	`/  __/ /_/ / /_/ / /_/ / ,<    / /_/ /_/ /  / /_/ / /_/ / __/`,
+	`\___/_.___/\____/\____/_/|_|   \__/\____/  / .___/\__,_/_/`,
+	`                                          /_/`,
 }
 
 type splashDoneMsg struct{}
@@ -93,7 +93,7 @@ func (m SplashModel) View() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(style.Center(style.SubtitleStyle().Render("Kindle books, laid out as PDFs."), m.width))
+	b.WriteString(style.Center(style.SubtitleStyle().Render("Ebooks, laid out as PDFs."), m.width))
 	b.WriteString("\n\n")
 
 	for _, line := range []string{

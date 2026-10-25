@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
 )
 
 // BatchOptions configures RunBatch.

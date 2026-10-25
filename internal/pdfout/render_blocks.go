@@ -3,13 +3,19 @@ package pdfout
 import (
 	"strings"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/htmldoc"
+	"github.com/jparkerweb/ebook-to-pdf/internal/htmldoc"
 )
 
 func (r *renderer) block(b htmldoc.Block) {
 	switch b.Kind {
 	case htmldoc.KindPageBreak:
-		if r.opts.ChapterBreaks && r.pageUsed {
+		if b.PageWidth > 0 {
+			r.sizedBreak(b.PageWidth, b.PageHeight)
+		} else if r.opts.ChapterBreaks && r.pageUsed && r.y < r.bottom {
+			// A full page (a picture given a page of its own) leaves the
+			// cursor at the bottom, so whatever follows starts a new page
+			// anyway; breaking here too would leave a blank page between
+			// every page of a comic.
 			r.newPage()
 		}
 	case htmldoc.KindRule:
@@ -41,6 +47,22 @@ func (r *renderer) block(b htmldoc.Block) {
 		}
 		r.paragraph(b, size, in)
 	}
+}
+
+// sizedBreak starts a w x h page whatever ChapterBreaks says, since a fixed
+// layout book places its content by page. An unused page of that size is
+// reused so that consecutive breaks do not leave blank pages behind.
+func (r *renderer) sizedBreak(w, h float64) {
+	if r.page > 0 && !r.pageUsed && r.pageW == w && r.pageH == h {
+		r.sizedPage = true
+		return
+	}
+	r.setGeometry(w, h)
+	r.newBarePage()
+	r.sizedPage = true
+	// The page may turn out to hold only a full-page image, which must not
+	// carry furniture, so drawing it waits for the first ordinary content.
+	r.furniturePending = true
 }
 
 // blockSize is the point size for a block: the body size scaled by the

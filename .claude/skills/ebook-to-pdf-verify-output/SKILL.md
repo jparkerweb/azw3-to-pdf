@@ -1,6 +1,6 @@
 ---
-name: azw3-to-pdf-verify-output
-description: Convert a real book and actually look at the resulting PDF pages, to check layout changes or diagnose a book that converts badly. Use when the user says "check the output", "does it still look right", "verify the PDF", "this book renders wrong", "the layout is off", or after any change to the parser, markup handling or renderer. Also use when the user types "/azw3-to-pdf-verify-output".
+name: ebook-to-pdf-verify-output
+description: Convert a real book and actually look at the resulting PDF pages, to check layout changes or diagnose a book that converts badly. Use when the user says "check the output", "does it still look right", "verify the PDF", "this book renders wrong", "the layout is off", or after any change to the parser, markup handling or renderer. Also use when the user types "/ebook-to-pdf-verify-output".
 user-invocable: true
 ---
 
@@ -27,7 +27,7 @@ Work in the scratchpad directory, never in the repo. Copy the book to a short AS
 ## Step 1: Inspect Before Converting
 
 ```bash
-go run ./cmd/azw3-to-pdf probe /path/to/book.azw3 --verbose
+go run ./cmd/ebook-to-pdf probe /path/to/book.azw3 --verbose
 ```
 
 Read the format, compression and block counts. This separates a parsing problem from a layout problem before any pages are drawn. Signals worth noticing:
@@ -39,11 +39,12 @@ Read the format, compression and block counts. This separates a parsing problem 
 | 0 images on an illustrated book | Resource indexing in `internal/ebook/book.go` |
 | Very few blocks for a long book | Flow splitting or the markup parser |
 | An error about DRM | Nothing to fix, the book is encrypted |
+| A CBZ or fixed-layout EPUB not reported as paged | Format detection in `internal/ebook/open.go` or the reader's `Paged` flag |
 
 ## Step 2: Convert
 
 ```bash
-go run ./cmd/azw3-to-pdf /path/to/book.azw3 --no-tui -o "$SCRATCH/out.pdf" --overwrite
+go run ./cmd/ebook-to-pdf /path/to/book.azw3 --no-tui -o "$SCRATCH/out.pdf" --overwrite
 ```
 
 Add `--preset paperback` or other flags when checking a specific layout. Note the reported page count, image count and bookmark count.
@@ -90,6 +91,23 @@ for t in titles[:8]:
     print(' ', binascii.unhexlify(t).decode('utf-16-be', 'replace').lstrip('﻿'))
 " "$SCRATCH/out.pdf"
 ```
+
+## Step 4b: Paged Books (Fixed-Layout EPUB and CBZ)
+
+A comic archive or a fixed-layout EPUB is pre-paginated: every book page should become exactly one PDF page, and no cover or title page is added, because the book's first page already is its cover. Check that rather than the reflow checks above:
+
+```bash
+go run ./cmd/ebook-to-pdf probe /path/to/comic.cbz --verbose     # says the book is paged
+pdfinfo -f 1 -l 5 "$SCRATCH/out.pdf" | grep "Page.*size"           # each page sized to its image
+```
+
+- The PDF page count equals the number of images in the CBZ (or spine pages in the EPUB). One extra page at the front means a cover or title page slipped in; blank pages between pictures mean a page break opened a page of its own
+- Page 1 is the book's own cover or first page, not a generated title page
+- Each picture fills its page with no margins, page number or running header, and is not stretched
+- Pages follow the book's order: for a CBZ, `2.jpg` before `10.jpg`
+- In a fixed-layout EPUB, text pages are reflowed onto a page of that book page's size; they will not match the original positioning, which is expected
+
+For a **reflowable EPUB**, run the normal checks in Steps 3 and 4, and also confirm the bookmarks follow the book's table of contents and the chapter titles render as headings rather than body text (EPUB stylesheets often style them in ways `css.go` does not read).
 
 ## Step 5: Compare Before and After
 

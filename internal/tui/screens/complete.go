@@ -7,9 +7,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/engine"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/messages"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/style"
+	"github.com/jparkerweb/ebook-to-pdf/internal/engine"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/messages"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 // CompleteModel reports a finished conversion and offers what to do next.

@@ -3,7 +3,7 @@ package pdfout
 import (
 	"strings"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/htmldoc"
+	"github.com/jparkerweb/ebook-to-pdf/internal/htmldoc"
 )
 
 // coverPage draws the book's cover art as a full-bleed first page.

@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 )
 
-const appName = "azw3-to-pdf"
+const appName = "ebook-to-pdf"
 
 // envConfigDir lets a user (or a test) relocate the whole configuration tree.
-const envConfigDir = "AZW3_TO_PDF_CONFIG"
+const envConfigDir = "EBOOK_TO_PDF_CONFIG"
 
 // Dir returns the configuration directory.
 func Dir() (string, error) {

@@ -2,10 +2,10 @@
 package messages
 
 import (
-	"github.com/jparkerweb/azw3-to-pdf/internal/ebook"
-	"github.com/jparkerweb/azw3-to-pdf/internal/engine"
-	"github.com/jparkerweb/azw3-to-pdf/internal/pdfout"
-	"github.com/jparkerweb/azw3-to-pdf/internal/presets"
+	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
+	"github.com/jparkerweb/ebook-to-pdf/internal/engine"
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/ebook-to-pdf/internal/presets"
 )
 
 // Screen identifies a screen in the interface.
@@ -65,7 +65,7 @@ func (s Screen) String() string {
 	case ScreenBatchComplete:
 		return "Batch finished"
 	}
-	return "azw3-to-pdf"
+	return "ebook-to-pdf"
 }
 
 // NavigateMsg switches to another screen.
@@ -94,6 +94,10 @@ type PresetSelectedMsg struct{ Preset presets.Preset }
 // holds the overrides rather than one field per knob, so a new layout option
 // does not need a new message field.
 type LayoutChangedMsg struct{ Overrides pdfout.OptionsOverrides }
+
+// SaveDefaultPageSizeMsg asks for a page size to be saved as the default for
+// later runs.
+type SaveDefaultPageSizeMsg struct{ Size pdfout.PageSize }
 
 // ConvertStartMsg asks the converting screen to begin.
 type ConvertStartMsg struct{}

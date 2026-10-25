@@ -1,4 +1,4 @@
-BINARY_NAME := azw3-to-pdf
+BINARY_NAME := ebook-to-pdf
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 DATE := $(shell date -u '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || echo "unknown")
@@ -7,7 +7,7 @@ LDFLAGS := -ldflags "-s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -
 .PHONY: build run test lint fmt ci install tidy clean snapshot release-check
 
 build:
-	CGO_ENABLED=0 go build $(LDFLAGS) -o $(BINARY_NAME) ./cmd/azw3-to-pdf/
+	CGO_ENABLED=0 go build $(LDFLAGS) -o $(BINARY_NAME) ./cmd/ebook-to-pdf/
 
 run: build
 	./$(BINARY_NAME)
@@ -24,7 +24,7 @@ fmt:
 ci: lint test build
 
 install:
-	go install $(LDFLAGS) ./cmd/azw3-to-pdf/
+	go install $(LDFLAGS) ./cmd/ebook-to-pdf/
 
 tidy:
 	go mod tidy

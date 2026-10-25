@@ -1,6 +1,11 @@
 package presets
 
-import "testing"
+import (
+	"strings"
+	"testing"
+
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
+)
 
 func TestAllPresetsProduceValidOptions(t *testing.T) {
 	for _, p := range All() {
@@ -54,5 +59,47 @@ func TestRecommend(t *testing.T) {
 		if got := Recommend(tc.book).Key; got != tc.want {
 			t.Errorf("%s: recommended %q, want %q", tc.name, got, tc.want)
 		}
+	}
+}
+
+func TestSavedPageSize(t *testing.T) {
+	cases := []struct {
+		preset, saved, want string
+	}{
+		{"ereader", "", "letter"},
+		{"ereader", "a5", "a5"},
+		{"phone", "a5", "kindle"},
+		{"paperback", "a5", "trade"},
+		{"a4", "a5", "a4"},
+		{"large-print", "", "letter"},
+	}
+	for _, tc := range cases {
+		p, _ := Lookup(tc.preset)
+		opts, err := p.OptionsWithPageSize(tc.saved)
+		if err != nil {
+			t.Fatalf("%s with %q saved: %v", tc.preset, tc.saved, err)
+		}
+		want, _ := pdfout.LookupPageSize(tc.want)
+		if opts.PageSize.Width != want.Width || opts.PageSize.Height != want.Height {
+			t.Errorf("%s with %q saved: %v x %v, want %s (%v x %v)", tc.preset, tc.saved,
+				opts.PageSize.Width, opts.PageSize.Height, tc.want, want.Width, want.Height)
+		}
+	}
+	if got, _ := Default().Options(); got.PageSize.Width != 612 || got.PageSize.Height != 792 {
+		t.Errorf("E-reader with nothing saved is %v x %v, want US Letter (612 x 792)", got.PageSize.Width, got.PageSize.Height)
+	}
+}
+
+func TestSummaryFollowsSavedPageSize(t *testing.T) {
+	ereader := Default()
+	if got := ereader.SummaryFor("a5"); !strings.HasPrefix(got, "A5") {
+		t.Errorf("E-reader with a5 saved is summarised as %q", got)
+	}
+	if got := ereader.Summary(); !strings.HasPrefix(got, "US Letter") {
+		t.Errorf("E-reader with nothing saved is summarised as %q", got)
+	}
+	phone, _ := Lookup("phone")
+	if phone.SummaryFor("a5") != phone.Summary() {
+		t.Error("a saved size should not change the Phone summary")
 	}
 }

@@ -13,10 +13,10 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/config"
-	"github.com/jparkerweb/azw3-to-pdf/internal/engine"
-	"github.com/jparkerweb/azw3-to-pdf/internal/logging"
-	"github.com/jparkerweb/azw3-to-pdf/internal/presets"
+	"github.com/jparkerweb/ebook-to-pdf/internal/config"
+	"github.com/jparkerweb/ebook-to-pdf/internal/engine"
+	"github.com/jparkerweb/ebook-to-pdf/internal/logging"
+	"github.com/jparkerweb/ebook-to-pdf/internal/presets"
 )
 
 // runHeadless converts books from the shell, printing progress as plain text.
@@ -38,7 +38,7 @@ func runHeadless(cmd *cobra.Command, inputs []string) error {
 	outOpts := buildOutputOptions(cfg, len(inputs) == 1)
 
 	if flagDryRun {
-		return dryRun(inputs, outOpts, preset)
+		return dryRun(inputs, outOpts, preset, cfg.Layout.PageSize)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -120,8 +120,8 @@ func reportOne(input string, res *engine.Result, err error) {
 }
 
 // dryRun reports what a conversion would produce without doing any work.
-func dryRun(inputs []string, out engine.OutputOptions, preset presets.Preset) error {
-	fmt.Printf("Preset: %s (%s)\n", preset.Name, preset.Summary())
+func dryRun(inputs []string, out engine.OutputOptions, preset presets.Preset, savedSize string) error {
+	fmt.Printf("Preset: %s (%s)\n", preset.Name, preset.SummaryFor(savedSize))
 	for _, in := range inputs {
 		path, err := engine.ResolveOutput(in, out)
 		switch {

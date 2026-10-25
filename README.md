@@ -1,11 +1,14 @@
-# azw3-to-pdf
+# ebook-to-pdf
 
-Turn Kindle books into PDFs, from a terminal interface or a single command.
+Turn ebooks into PDFs, from a terminal interface or a single command: EPUB,
+Kindle, comic archives, FictionBook, plain text and HTML.
 
-<img src="azw3-to-pdf.jpg" style="max-width:800px;" alt="banner">
+This project was renamed from azw3-to-pdf. Settings saved under the old name are not carried over.
 
-`azw3-to-pdf` reads `.azw3`, `.azw`, `.mobi` and `.prc` files and lays them out as PDFs.  
-Everything is built in: the MOBI/KF8 parser, the layout engine and the PDF writer are all part of the binary.  
+<img src="ebook-to-pdf.jpg" style="max-width:800px;" alt="banner">
+
+`ebook-to-pdf` reads `.epub`, `.azw3`, `.azw`, `.mobi`, `.prc`, `.cbz`, `.fb2`, `.fb2.zip`, `.txt` and `.html` files and lays them out as PDFs.  
+Everything is built in: every format reader, the layout engine and the PDF writer are all part of the binary.  
 There is no Calibre, no Python, no Ghostscript and nothing else to install.
 
 - **A file browser in the terminal.** Run it with no arguments and pick a book.
@@ -20,14 +23,14 @@ There is no Calibre, no Python, no Ghostscript and nothing else to install.
 ## Install
 
 ```sh
-go install github.com/jparkerweb/azw3-to-pdf/cmd/azw3-to-pdf@latest
+go install github.com/jparkerweb/ebook-to-pdf/cmd/ebook-to-pdf@latest
 ```
 
 Or clone and build:
 
 ```sh
-git clone https://github.com/jparkerweb/azw3-to-pdf.git
-cd azw3-to-pdf
+git clone https://github.com/jparkerweb/ebook-to-pdf.git
+cd ebook-to-pdf
 make build
 ```
 
@@ -36,25 +39,33 @@ make build
 Open the interface and browse for a book:
 
 ```sh
-azw3-to-pdf
+ebook-to-pdf
 ```
 
 Convert one book from the shell:
 
 ```sh
-azw3-to-pdf book.azw3 --no-tui
+ebook-to-pdf book.azw3 --no-tui
 ```
 
 Convert a whole folder into a separate output directory, four at a time:
 
 ```sh
-azw3-to-pdf ~/Books --recursive --no-tui --output-dir ~/PDFs --jobs 4
+ebook-to-pdf ~/Books --recursive --no-tui --output-dir ~/PDFs --jobs 4
+```
+
+A folder scan picks up every ebook format except plain text and HTML, since a
+folder of books often holds `.txt` notes and saved web pages that are not
+books. Add `--include-text` to convert those too:
+
+```sh
+ebook-to-pdf ~/Books --no-tui --include-text
 ```
 
 Look inside a book without converting it:
 
 ```sh
-azw3-to-pdf probe book.azw3 --verbose
+ebook-to-pdf probe book.epub --verbose
 ```
 
 ### In the interface
@@ -75,24 +86,24 @@ azw3-to-pdf probe book.azw3 --verbose
 ## Presets
 
 ```sh
-azw3-to-pdf presets
+ebook-to-pdf presets
 ```
 
-| Preset | Layout |
-| --- | --- |
-| `ereader` | A5, 11 pt serif, tight margins. The default. |
-| `paperback` | 6 × 9 in with book margins and a running header. |
-| `print` | US Letter with generous margins for printing. |
-| `a4` | A4 with standard margins. |
-| `compact` | Small type and thin margins; about a third fewer pages. |
-| `large-print` | A4, 16 pt sans, open leading. |
-| `phone` | A narrow page that fills a phone screen. |
-| `manuscript` | Double-spaced Letter pages for mark-up. |
+| Preset | Page size | Layout |
+| --- | --- | --- |
+| `ereader` | default (Letter) | 11 pt serif, tight margins. The default preset. |
+| `paperback` | 6 × 9 in | Book margins and a running header. |
+| `print` | default (Letter) | Generous margins for printing. |
+| `a4` | A4 | Standard margins. |
+| `compact` | default (Letter) | Small type and thin margins; about a third fewer pages. |
+| `large-print` | default (Letter) | 16 pt sans, open leading. |
+| `phone` | Kindle | A narrow page that fills a phone screen. |
+| `manuscript` | default (Letter) | Double-spaced pages for mark-up. |
 
 Any preset can be overridden:
 
 ```sh
-azw3-to-pdf book.azw3 --no-tui \
+ebook-to-pdf book.azw3 --no-tui \
   --preset paperback \
   --page-size 120x160mm \
   --font-size 12 \
@@ -101,8 +112,20 @@ azw3-to-pdf book.azw3 --no-tui \
   --no-justify
 ```
 
-`azw3-to-pdf page-sizes` lists the built-in sizes. A measurement works too:
+`ebook-to-pdf page-sizes` lists the built-in sizes. A measurement works too:
 `120x160mm`, `6x9in` or `432x648pt`.
+
+### Page size
+
+Pages are US Letter unless you choose otherwise. The size presets (`paperback`,
+`a4` and `phone`) always keep their own page; every other preset uses your
+default page size.
+
+- **Change the default** on the layout screen: pick a size and press `s` to
+  save it as your default. To get the old A5 pages back, choose A5 and press `s`.
+- **Or set it in the configuration file** with `layout.page_size` (for example
+  `page_size: a5`).
+- **For one run only**, pass `--page-size`; nothing is saved.
 
 ## Fonts
 
@@ -118,7 +141,7 @@ collections (`.ttc`) are skipped in favour of the next candidate.
 ## Configuration
 
 Settings are read from `config.yaml` in your configuration directory
-(`azw3-to-pdf version` prints the path). Everything is optional:
+(`ebook-to-pdf version` prints the path). Everything is optional:
 
 ```yaml
 preset: paperback
@@ -146,27 +169,43 @@ ui:
 
 Command-line flags override the file, which overrides the preset.
 
+Two environment variables are read as well. `EBOOK_TO_PDF_CONFIG` moves the
+whole configuration directory, which is handy for keeping a separate set of
+settings. `EBOOK_TO_PDF_LOG_LEVEL` overrides the log level (for example
+`debug`); the terminal interface logs to a file in the logs directory that
+`ebook-to-pdf version` prints, and headless runs log to stderr.
+
 ## What it understands
 
-| | |
-| --- | --- |
-| Containers | Palm database (`.azw3`, `.azw`, `.mobi`, `.prc`) |
-| Formats | KF8 (MOBI 8) and MOBI 6, including dual-format files |
-| Compression | None, PalmDOC (LZ77) and HUFF/CDIC |
-| Text | UTF-8 and Windows-1252 |
-| Images | JPEG, PNG, GIF and BMP |
-| Styling | The book's own stylesheet: alignment, relative font sizes, hanging indents and page breaks |
+The format is worked out from the file's content first and its name second, so
+a Kindle book misnamed `.epub` is still read as a Kindle book.
 
-**DRM is not removed.** A book bought from the Kindle store and never
-de-authorised is encrypted, and `azw3-to-pdf` will say so rather than produce a
-PDF of noise. Convert books you own in an unencrypted form.
+| Format | Extensions | What converts | Limits |
+| --- | --- | --- | --- |
+| EPUB 2 and 3 | `.epub` | Reflowable and fixed-layout books: spine order, metadata, cover, images, the book's stylesheet, and table of contents entries as headings and bookmarks | Fixed-layout text pages are reflowed, not positioned exactly |
+| Kindle | `.azw3`, `.azw`, `.mobi`, `.prc` | KF8 (MOBI 8) and MOBI 6, including dual-format files; PalmDOC and HUFF/CDIC compression | `.kfx`, the newest Kindle format, is not supported |
+| Comic archive | `.cbz` | One full page per image, in natural file-name order (`2.jpg` before `10.jpg`); `ComicInfo.xml` metadata | Zip only: `.cbr` (RAR) and `.cb7` are not read |
+| FictionBook 2 | `.fb2`, `.fb2.zip` | Sections as headings, emphasis, poems, epigraphs, notes, embedded images and the cover; declared encodings such as Windows-1251 and KOI8-R | |
+| Plain text | `.txt` | Paragraphs split on blank lines; conservative chapter heading detection (`CHAPTER IV`, `Part Two`, a lone `XIV`); Project Gutenberg headers and licences trimmed | UTF-8 or Windows-1252; skipped by folder scans without `--include-text` |
+| HTML | `.html`, `.htm`, `.xhtml` | A single page with its own stylesheets and its images from the same folder or below | Remote images and anything outside the page's folder are never read; skipped by folder scans without `--include-text` |
 
-`.kfx`, the newest Kindle format, is a different container and is not supported.
+Images may be JPEG, PNG, GIF, BMP or WebP. Styling comes from the book's own
+stylesheet: alignment, relative font sizes, hanging indents and page breaks.
+
+**Comics and fixed-layout books** get one PDF page per book page, each sized to
+its page, with no added cover or title page: the book's first page already is
+its cover. A fixed-layout book whose pages are text keeps the last fixed page
+size for any reflowed pages that follow it.
+
+**DRM is not removed.** A locked EPUB or Kindle book is refused with a clear
+message rather than turned into a PDF of noise. Buy or download DRM-free copies
+of the books you want to convert. (EPUB font obfuscation is not DRM, and such
+books convert normally.)
 
 ## Development
 
 ```sh
-make build     # build ./azw3-to-pdf
+make build     # build ./ebook-to-pdf
 make test      # go test ./...
 make lint      # golangci-lint run ./...
 make ci        # lint, test and build, as CI does
@@ -183,7 +222,7 @@ The code is laid out in stages, each of which can be read on its own:
 
 | Package | Does |
 | --- | --- |
-| `internal/ebook` | Palm container, MOBI/KF8 headers, decompression, resources |
+| `internal/ebook` | Format detection and one reader per format, each producing the same `Book` |
 | `internal/htmldoc` | Book markup and CSS to a flat list of layout blocks |
 | `internal/pdfout` | Blocks to pages: wrapping, images, bookmarks, fonts |
 | `internal/engine` | Conversion jobs, output naming, progress |

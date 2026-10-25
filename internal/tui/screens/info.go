@@ -7,10 +7,10 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/ebook"
-	"github.com/jparkerweb/azw3-to-pdf/internal/htmldoc"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/messages"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/style"
+	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
+	"github.com/jparkerweb/ebook-to-pdf/internal/htmldoc"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/messages"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 // InfoModel shows what was found inside the chosen book.
@@ -78,22 +78,24 @@ func (m InfoModel) View() string {
 	sb.WriteString(style.SubtitleStyle().Render(b.AuthorLine()))
 	sb.WriteString("\n\n")
 
-	sb.WriteString(row("File", filepath.Base(b.Path)))
-	sb.WriteString(row("Size", formatBytes(b.FileSize)))
-	sb.WriteString(row("Format", b.Format))
-	sb.WriteString(row("Compression", b.Compression))
-	if b.Publisher != "" {
-		sb.WriteString(row("Publisher", b.Publisher))
+	// Most formats leave some fields blank (only MOBI has a compression
+	// scheme), so an empty value drops its row rather than showing a gap.
+	add := func(label, value string) {
+		if value != "" {
+			sb.WriteString(row(label, value))
+		}
 	}
-	if b.Published != "" {
-		sb.WriteString(row("Published", b.Published))
+	add("File", filepath.Base(b.Path))
+	add("Size", formatBytes(b.FileSize))
+	add("Format", b.Format)
+	add("Compression", b.Compression)
+	if b.Paged {
+		add("Layout", "fixed pages")
 	}
-	if b.Language != "" {
-		sb.WriteString(row("Language", b.Language))
-	}
-	if b.ISBN != "" {
-		sb.WriteString(row("ISBN", b.ISBN))
-	}
+	add("Publisher", b.Publisher)
+	add("Published", b.Published)
+	add("Language", b.Language)
+	add("ISBN", b.ISBN)
 	sb.WriteString(row("Content", fmt.Sprintf("%s of markup, %d blocks", formatBytes(int64(b.TextBytes)), m.blocks)))
 
 	images := fmt.Sprintf("%d embedded", len(b.Resources))

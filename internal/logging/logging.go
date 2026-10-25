@@ -11,11 +11,11 @@ import (
 
 	"github.com/charmbracelet/log"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/config"
+	"github.com/jparkerweb/ebook-to-pdf/internal/config"
 )
 
 // envLogLevel overrides the level passed to Setup.
-const envLogLevel = "AZW3_TO_PDF_LOG_LEVEL"
+const envLogLevel = "EBOOK_TO_PDF_LOG_LEVEL"
 
 // Setup initialises logging. In "tui" mode the log goes to a file, because
 // anything written to the terminal would corrupt the interface; in "headless"
@@ -34,7 +34,7 @@ func Setup(mode, level string) error {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return fmt.Errorf("creating log directory: %w", err)
 		}
-		f, err := os.Create(filepath.Join(dir, "azw3-to-pdf.log"))
+		f, err := os.Create(filepath.Join(dir, "ebook-to-pdf.log"))
 		if err != nil {
 			return fmt.Errorf("creating log file: %w", err)
 		}

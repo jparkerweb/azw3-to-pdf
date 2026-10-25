@@ -1,12 +1,14 @@
 package cli
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/config"
-	"github.com/jparkerweb/azw3-to-pdf/internal/presets"
+	"github.com/jparkerweb/ebook-to-pdf/internal/config"
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/ebook-to-pdf/internal/presets"
 )
 
 // resetRunFlags clears the package-level flag variables, which persist between
@@ -99,8 +101,49 @@ func TestBuildPDFOptionsPrecedence(t *testing.T) {
 
 	t.Run("bad page size in config is an error", func(t *testing.T) {
 		cfg := &config.Config{Layout: config.LayoutConfig{PageSize: "elephant"}}
-		if _, err := buildPDFOptions(parsed(t), cfg, preset); err == nil {
-			t.Error("expected an error for an unknown page size")
+		_, err := buildPDFOptions(parsed(t), cfg, preset)
+		if err == nil {
+			t.Fatal("expected an error for an unknown page size")
+		}
+		if !strings.Contains(err.Error(), "elephant") {
+			t.Errorf("the error should name the bad value: %v", err)
 		}
 	})
+}
+
+func TestBuildPDFOptionsSavedPageSize(t *testing.T) {
+	ereader := presets.Default()
+	phone, _ := presets.Lookup("phone")
+	size := func(name string) pdfout.PageSize {
+		ps, err := pdfout.LookupPageSize(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return ps
+	}
+	a5 := &config.Config{Layout: config.LayoutConfig{PageSize: "a5"}}
+
+	cases := []struct {
+		name   string
+		args   []string
+		cfg    *config.Config
+		preset presets.Preset
+		want   string
+	}{
+		{"no config gives Letter", nil, nil, ereader, "letter"},
+		{"saved a5 applies to E-reader", nil, a5, ereader, "a5"},
+		{"saved a5 leaves Phone alone", nil, a5, phone, "kindle"},
+		{"--page-size beats the size preset", []string{"--page-size", "a6"}, nil, phone, "a6"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			opts, err := buildPDFOptions(parsed(t, tc.args...), tc.cfg, tc.preset)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if want := size(tc.want); opts.PageSize != want {
+				t.Errorf("page size is %+v, want %s", opts.PageSize, tc.want)
+			}
+		})
+	}
 }

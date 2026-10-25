@@ -327,3 +327,69 @@ func TestParseSizeKeepsTheRawScale(t *testing.T) {
 		}
 	}
 }
+
+func TestParseHeadingHook(t *testing.T) {
+	doc := Parse(`<p>Before</p><span data-ebook-heading="2">Ch</span><p>After</p>`)
+	if len(doc.Blocks) != 3 {
+		t.Fatalf("parsed %d blocks, want 3: %#v", len(doc.Blocks), doc.Blocks)
+	}
+	if b := doc.Blocks[1]; b.Kind != KindHeading || b.Level != 2 || b.Text() != "Ch" {
+		t.Errorf("hooked span became kind %v level %d text %q", b.Kind, b.Level, b.Text())
+	}
+
+	doc = Parse(`<p data-ebook-heading="9">Deep</p>`)
+	if len(doc.Blocks) != 1 || doc.Blocks[0].Kind != KindHeading || doc.Blocks[0].Level != 6 {
+		t.Errorf("data-ebook-heading=\"9\" gave %#v, want a level-6 heading", doc.Blocks)
+	}
+}
+
+func TestParseFullPageImageHook(t *testing.T) {
+	doc := Parse(`<img recindex="3" data-ebook-fullpage><img recindex="4">`)
+	if len(doc.Blocks) != 2 {
+		t.Fatalf("parsed %d blocks, want 2: %#v", len(doc.Blocks), doc.Blocks)
+	}
+	if !doc.Blocks[0].FullPage {
+		t.Errorf("image with data-ebook-fullpage is not FullPage")
+	}
+	if doc.Blocks[1].FullPage {
+		t.Errorf("plain image is FullPage")
+	}
+}
+
+func TestParseSizedPageHook(t *testing.T) {
+	doc := Parse(`<html><body>a</body></html>` +
+		`<html><body><ebook:page width="600" height="800"/>b</body></html>`)
+	var breaks []Block
+	for _, b := range doc.Blocks {
+		if b.Kind == KindPageBreak {
+			breaks = append(breaks, b)
+		}
+	}
+	if len(breaks) != 1 {
+		t.Fatalf("found %d page breaks, want 1: %#v", len(breaks), doc.Blocks)
+	}
+	if breaks[0].PageWidth != 600 || breaks[0].PageHeight != 800 {
+		t.Errorf("break is %v x %v, want 600 x 800", breaks[0].PageWidth, breaks[0].PageHeight)
+	}
+
+	doc = Parse(`<ebook:page width="600" height="800"><p>First</p>`)
+	if len(doc.Blocks) != 2 {
+		t.Fatalf("parsed %d blocks, want 2: %#v", len(doc.Blocks), doc.Blocks)
+	}
+	if b := doc.Blocks[0]; b.Kind != KindPageBreak || b.PageWidth != 600 || b.PageHeight != 800 {
+		t.Errorf("document does not start with a sized break: %#v", b)
+	}
+	if b := doc.Blocks[1]; b.Kind != KindParagraph || b.Text() != "First" {
+		t.Errorf("content after the sized break is %#v", b)
+	}
+
+	// ParseFloat accepts these, but no page can be that size.
+	for _, size := range []string{"inf", "+Inf", "NaN"} {
+		doc = Parse(`<ebook:page width="600" height="` + size + `"/><p>Text</p>`)
+		for _, b := range doc.Blocks {
+			if b.Kind == KindPageBreak {
+				t.Errorf("height %q produced a page break %#v", size, b)
+			}
+		}
+	}
+}

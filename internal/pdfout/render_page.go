@@ -4,23 +4,52 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/htmldoc"
+	"github.com/signintech/gopdf"
+
+	"github.com/jparkerweb/ebook-to-pdf/internal/htmldoc"
 )
+
+// setGeometry makes w x h the size of the pages added from now on and lays
+// the configured margins out inside it.
+func (r *renderer) setGeometry(w, h float64) {
+	r.pageW, r.pageH = w, h
+	m := r.opts.Margins
+	r.left = m.Left
+	r.right = w - m.Right
+	r.top = m.Top
+	r.bottom = h - m.Bottom
+	r.contentWidth = r.right - r.left
+	r.contentHeight = r.bottom - r.top
+}
 
 // newPage starts a fresh page and draws its furniture.
 func (r *renderer) newPage() {
-	r.pdf.AddPage()
-	r.page++
-	r.pageUsed = false
-	r.y = r.top
+	r.newBarePage()
 	r.drawFurniture()
 }
 
+// newBarePage starts a fresh page of the current geometry without a header or
+// page number. Every page records its own size, so one PDF can mix them.
+func (r *renderer) newBarePage() {
+	r.pdf.AddPageWithOption(gopdf.PageOption{PageSize: &gopdf.Rect{W: r.pageW, H: r.pageH}})
+	r.page++
+	r.pageUsed = false
+	r.sizedPage = false
+	r.furniturePending = false
+	r.y = r.top
+}
+
 // ensurePage starts the first page lazily so that leading page breaks in the
-// source do not produce blank pages.
+// source do not produce blank pages. It is also the point every ordinary
+// drawing path passes through, so a sized page gets its held-back furniture
+// here.
 func (r *renderer) ensurePage() {
 	if r.page == 0 {
 		r.newPage()
+	}
+	if r.furniturePending {
+		r.furniturePending = false
+		r.drawFurniture()
 	}
 }
 

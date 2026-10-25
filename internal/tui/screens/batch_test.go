@@ -3,12 +3,16 @@ package screens
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/engine"
-	"github.com/jparkerweb/azw3-to-pdf/internal/pdfout"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/messages"
+	tea "charm.land/bubbletea/v2"
+
+	"github.com/jparkerweb/ebook-to-pdf/internal/engine"
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/messages"
 )
 
 // TestBatchStartRunsOneBookAtATime checks that the interface hands the shared
@@ -77,5 +81,38 @@ func TestBatchStartReportsThroughChannels(t *testing.T) {
 	}
 	if _, ok := next().(messages.BatchDoneMsg); !ok {
 		t.Error("the last message should be BatchDoneMsg")
+	}
+}
+
+// TestTypedFolderSkipsText checks that a typed folder follows the CLI scan
+// rule: ebooks are picked up, text and HTML files are not.
+func TestTypedFolderSkipsText(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"book.epub", "notes.txt", "page.html"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	m := NewFilePickerModel()
+	m.typing, m.typed = true, dir
+	_, cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("entering a folder with a book in it should select it")
+	}
+	msg, ok := cmd().(messages.FileSelectedMsg)
+	if !ok || filepath.Base(msg.Path) != "book.epub" {
+		t.Errorf("selected %+v, want only book.epub", msg)
+	}
+
+	textOnly := t.TempDir()
+	if err := os.WriteFile(filepath.Join(textOnly, "notes.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m = NewFilePickerModel()
+	m.typing, m.typed = true, textOnly
+	next, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if got := next.(FilePickerModel).errMsg; got != "No ebooks in "+textOnly {
+		t.Errorf("error is %q", got)
 	}
 }

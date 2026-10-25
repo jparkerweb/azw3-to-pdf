@@ -1,10 +1,10 @@
-// Command azw3-to-pdf converts Kindle books into PDFs.
+// Command ebook-to-pdf converts Kindle books into PDFs.
 package main
 
 import (
 	"os"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/cli"
+	"github.com/jparkerweb/ebook-to-pdf/internal/cli"
 )
 
 // Build details, injected with -ldflags at release time.

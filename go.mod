@@ -1,4 +1,4 @@
-module github.com/jparkerweb/azw3-to-pdf
+module github.com/jparkerweb/ebook-to-pdf
 
 go 1.25.0
 

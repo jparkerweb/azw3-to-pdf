@@ -11,9 +11,9 @@ import (
 	"charm.land/bubbles/v2/filepicker"
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/engine"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/messages"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/style"
+	"github.com/jparkerweb/ebook-to-pdf/internal/engine"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/messages"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 // FilePickerModel is the built-in file browser.
@@ -118,7 +118,7 @@ func (m FilePickerModel) Update(msg tea.Msg) (style.ScreenModel, tea.Cmd) {
 
 		case " ":
 			path := m.picker.HighlightedPath()
-			if path == "" || !engine.IsBookFile(path) {
+			if path == "" || !engine.IsConvertible(path) {
 				return m, nil
 			}
 			m.toggle(path)
@@ -126,8 +126,9 @@ func (m FilePickerModel) Update(msg tea.Msg) (style.ScreenModel, tea.Cmd) {
 			return m, nil
 
 		case "a":
-			// Add every book in the folder being browsed.
-			found := engine.DiscoverBooks(m.picker.CurrentDirectory, false)
+			// Add every book in the folder being browsed. Text and HTML are
+			// left out, as in a CLI folder scan, because most are not books.
+			found := engine.DiscoverBooks(m.picker.CurrentDirectory, false, false)
 			for _, f := range found {
 				if !m.selected[f] {
 					m.toggle(f)
@@ -169,7 +170,7 @@ func (m FilePickerModel) Update(msg tea.Msg) (style.ScreenModel, tea.Cmd) {
 		)
 	}
 	if rejected, path := m.picker.DidSelectDisabledFile(msg); rejected {
-		m.errMsg = fmt.Sprintf("%s is not a Kindle book", filepath.Base(path))
+		m.errMsg = fmt.Sprintf("%s is not a supported ebook", filepath.Base(path))
 		return m, nil
 	}
 	return m, cmd
@@ -244,16 +245,16 @@ func (m FilePickerModel) handleTyping(msg tea.KeyPressMsg) (style.ScreenModel, t
 				return m, nil
 			}
 			if info.IsDir() {
-				found := engine.DiscoverBooks(part, m.recursive)
+				found := engine.DiscoverBooks(part, m.recursive, false)
 				if len(found) == 0 {
-					m.errMsg = fmt.Sprintf("No Kindle books in %s", part)
+					m.errMsg = fmt.Sprintf("No ebooks in %s", part)
 					return m, nil
 				}
 				paths = append(paths, found...)
 				continue
 			}
-			if !engine.IsBookFile(part) {
-				m.errMsg = fmt.Sprintf("%s is not a Kindle book", filepath.Base(part))
+			if !engine.IsConvertible(part) {
+				m.errMsg = fmt.Sprintf("%s is not a supported ebook", filepath.Base(part))
 				return m, nil
 			}
 			paths = append(paths, part)

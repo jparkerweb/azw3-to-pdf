@@ -1,17 +1,20 @@
 package tui
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/ebook"
-	"github.com/jparkerweb/azw3-to-pdf/internal/engine"
-	"github.com/jparkerweb/azw3-to-pdf/internal/pdfout"
-	"github.com/jparkerweb/azw3-to-pdf/internal/presets"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/messages"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/style"
+	"github.com/jparkerweb/ebook-to-pdf/internal/config"
+	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
+	"github.com/jparkerweb/ebook-to-pdf/internal/engine"
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/ebook-to-pdf/internal/presets"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/messages"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 // sampleBook is enough of a book for the screens to have something to show.
@@ -215,5 +218,90 @@ func TestLayoutChangeReachesOptions(t *testing.T) {
 	}
 	if got := app.pdf.Margins.Top * 25.4 / 72; got < 29.9 || got > 30.1 {
 		t.Errorf("margin is %.2f mm, want 30", got)
+	}
+}
+
+// TestSaveDefaultPageSize checks that s on the layout screen writes the page
+// size to config.yaml, and that a custom size reads back exactly.
+func TestSaveDefaultPageSize(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("EBOOK_TO_PDF_CONFIG", dir)
+	cfg, err := config.Load("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	opts, err := presets.Default().Options()
+	if err != nil {
+		t.Fatal(err)
+	}
+	app := NewApp(AppOptions{
+		Version: "test",
+		Book:    sampleBook(),
+		Inputs:  []string{"library/example.azw3"},
+		Preset:  presets.Default(),
+		PDF:     opts,
+		Config:  cfg,
+	})
+	app = drive(t, app, tea.WindowSizeMsg{Width: 100, Height: 30})
+
+	saveOnLayout := func(app App, size pdfout.PageSize) (App, *config.Config) {
+		t.Helper()
+		app.pdf.PageSize = size
+		app.pushState()
+		model, _ := app.navigateTo(messages.ScreenLayout)
+		app = press(t, model.(App), "s")
+		data, err := os.ReadFile(filepath.Join(dir, "config.yaml"))
+		if err != nil {
+			t.Fatalf("config.yaml was not written: %v", err)
+		}
+		if !strings.Contains(string(data), "page_size:") {
+			t.Fatalf("config.yaml has no page_size: %s", data)
+		}
+		saved, err := config.Load("")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return app, saved
+	}
+
+	a5, _ := pdfout.LookupPageSize("a5")
+	app, saved := saveOnLayout(app, a5)
+	if saved.Layout.PageSize != "a5" {
+		t.Errorf("saved page size is %q, want a5", saved.Layout.PageSize)
+	}
+	if !strings.Contains(app.status, "Default page size saved") {
+		t.Errorf("status is %q", app.status)
+	}
+
+	custom, _ := pdfout.LookupPageSize("6x9in")
+	app, saved = saveOnLayout(app, custom)
+	if !strings.Contains(app.status, "432x648pt") {
+		t.Errorf("status %q should name the custom size it saved", app.status)
+	}
+	got, err := pdfout.LookupPageSize(saved.Layout.PageSize)
+	if err != nil {
+		t.Fatalf("saved custom size %q does not read back: %v", saved.Layout.PageSize, err)
+	}
+	if got.Width != 432 || got.Height != 648 {
+		t.Errorf("custom 6x9in reads back as %v x %v, want 432 x 648", got.Width, got.Height)
+	}
+}
+
+// TestInfoSkipsEmptyRows checks that a field a format leaves blank drops its
+// row, and that a pre-paginated book says so.
+func TestInfoSkipsEmptyRows(t *testing.T) {
+	book := sampleBook()
+	book.Compression = ""
+	book.Paged = true
+	app := NewApp(AppOptions{Version: "test", Book: book, Output: engine.OutputOptions{Conflict: engine.ConflictOverwrite}})
+	app = drive(t, app, tea.WindowSizeMsg{Width: 100, Height: 30})
+	app = drive(t, app, messages.NavigateMsg{Screen: messages.ScreenInfo})
+
+	view := app.View().Content
+	if strings.Contains(view, "Compression") {
+		t.Error("an empty Compression should not get a row")
+	}
+	if !strings.Contains(view, "fixed pages") {
+		t.Error("a paged book should show its fixed-page layout")
 	}
 }

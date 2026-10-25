@@ -10,14 +10,14 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/config"
-	"github.com/jparkerweb/azw3-to-pdf/internal/ebook"
-	"github.com/jparkerweb/azw3-to-pdf/internal/engine"
-	"github.com/jparkerweb/azw3-to-pdf/internal/pdfout"
-	"github.com/jparkerweb/azw3-to-pdf/internal/presets"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/messages"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/screens"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/style"
+	"github.com/jparkerweb/ebook-to-pdf/internal/config"
+	"github.com/jparkerweb/ebook-to-pdf/internal/ebook"
+	"github.com/jparkerweb/ebook-to-pdf/internal/engine"
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/ebook-to-pdf/internal/presets"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/messages"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/screens"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 // AppOptions configures a new interface session.
@@ -176,7 +176,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case messages.PresetSelectedMsg:
 		a.preset = msg.Preset
-		if opts, err := msg.Preset.Options(); err == nil {
+		saved := ""
+		if a.cfg != nil {
+			saved = a.cfg.Layout.PageSize
+		}
+		if opts, err := msg.Preset.OptionsWithPageSize(saved); err == nil {
 			a.pdf = opts
 		}
 		a.pushState()
@@ -189,6 +193,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.applyLayout(msg)
 		a.pushState()
 		return a.goBack()
+
+	case messages.SaveDefaultPageSizeMsg:
+		a.status = a.saveDefaultPageSize(msg.Size)
+		a.pushState()
+		return a, nil
 
 	case messages.ConvertStartMsg:
 		nav, cmd := a.navigateTo(messages.ScreenConverting)
@@ -303,6 +312,9 @@ func (a *App) pushState() {
 		Output: a.output,
 		Result: a.result,
 	}
+	if a.cfg != nil {
+		state.SavedPageSize = a.cfg.Layout.PageSize
+	}
 	for id, model := range a.screens {
 		if s, ok := model.(style.Screen); ok {
 			a.screens[id] = s.PushState(state)
@@ -313,6 +325,33 @@ func (a *App) pushState() {
 func (a *App) applyLayout(msg messages.LayoutChangedMsg) {
 	a.pdf = a.pdf.ApplyOverrides(msg.Overrides)
 	a.pdf.Normalize()
+}
+
+// saveDefaultPageSize writes size to the config file as the default page size
+// and returns the status line to show.
+func (a *App) saveDefaultPageSize(size pdfout.PageSize) string {
+	if a.cfg == nil {
+		return "No settings file is loaded, so the page size was not saved"
+	}
+	// A custom size is written in points: its Name carries no unit and would
+	// read back as millimetres.
+	value := fmt.Sprintf("%gx%gpt", size.Width, size.Height)
+	label := value
+	for _, named := range pdfout.PageSizes() {
+		if named.Name == size.Name {
+			value, label = size.Name, size.Label
+			break
+		}
+	}
+	a.cfg.Layout.PageSize = value
+	if err := a.cfg.Save(); err != nil {
+		return fmt.Sprintf("Could not save the default page size to %s: %v", a.cfg.Path(), err)
+	}
+	status := "Default page size saved: " + label
+	if a.preset.SizePreset {
+		status += " (not used by Phone, Paperback, A4)"
+	}
+	return status
 }
 
 func (a *App) syncViewport() {
@@ -381,7 +420,7 @@ func (a App) header() string {
 	if version != "" && version[0] != 'v' {
 		version = "v" + version
 	}
-	left := style.HeaderStyle().Render(fmt.Sprintf(" azw3-to-pdf %s ", version))
+	left := style.HeaderStyle().Render(fmt.Sprintf(" ebook-to-pdf %s ", version))
 	right := style.HeaderStyle().Render(fmt.Sprintf(" %s ", a.current.String()))
 
 	gap := a.width - style.Visible(left) - style.Visible(right)

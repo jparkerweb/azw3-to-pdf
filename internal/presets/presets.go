@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
 )
 
 // Preset is a named starting point for a PDF layout.
@@ -26,7 +26,14 @@ type Preset struct {
 	TitlePage     bool
 	PageNumbers   bool
 	RunningHeader bool
+
+	// SizePreset marks a preset whose page size is part of its identity, so it
+	// wins over the page size the user saved as their default.
+	SizePreset bool
 }
+
+// DefaultPageSize is the page size used when the user has not saved one.
+const DefaultPageSize = "letter"
 
 // registry is the built-in preset list, in the order they are shown.
 var registry = []Preset{
@@ -43,6 +50,7 @@ var registry = []Preset{
 		Description: "Trade paperback proportions with book margins. Looks like a printed novel.",
 		PageSize:    "trade", MarginMM: 18, Font: "serif", FontSize: 11.5, LineSpacing: 1.42,
 		Justify: true, TitlePage: true, PageNumbers: true, RunningHeader: true,
+		SizePreset: true,
 	},
 	{
 		Key:         "print",
@@ -57,6 +65,7 @@ var registry = []Preset{
 		Description: "A4 with standard margins, for everywhere that is not the US.",
 		PageSize:    "a4", MarginMM: 20, Font: "serif", FontSize: 11.5, LineSpacing: 1.45,
 		Justify: true, TitlePage: true, PageNumbers: true, RunningHeader: true,
+		SizePreset: true,
 	},
 	{
 		Key:         "compact",
@@ -78,6 +87,7 @@ var registry = []Preset{
 		Description: "A narrow page that fills a phone screen without pinch-zooming.",
 		PageSize:    "kindle", MarginMM: 7, Font: "sans", FontSize: 10, LineSpacing: 1.35,
 		Justify: false, TitlePage: false, PageNumbers: false,
+		SizePreset: true,
 	},
 	{
 		Key:         "manuscript",
@@ -121,9 +131,28 @@ func Keys() []string {
 	return keys
 }
 
-// Options converts a preset into renderer options.
+// PageSizeFor returns the page size this preset renders with, given the page
+// size the user saved as their default (empty when none is saved).
+func (p Preset) PageSizeFor(saved string) string {
+	switch {
+	case p.SizePreset:
+		return p.PageSize
+	case saved != "":
+		return saved
+	default:
+		return DefaultPageSize
+	}
+}
+
+// Options converts a preset into renderer options, with no saved page size.
 func (p Preset) Options() (pdfout.Options, error) {
-	size, err := pdfout.LookupPageSize(p.PageSize)
+	return p.OptionsWithPageSize("")
+}
+
+// OptionsWithPageSize converts a preset into renderer options, using the saved
+// default page size unless the preset is a size preset.
+func (p Preset) OptionsWithPageSize(saved string) (pdfout.Options, error) {
+	size, err := pdfout.LookupPageSize(p.PageSizeFor(saved))
 	if err != nil {
 		return pdfout.Options{}, err
 	}
@@ -142,10 +171,17 @@ func (p Preset) Options() (pdfout.Options, error) {
 	return opts, nil
 }
 
-// Summary is a one-line description of the layout a preset produces.
+// Summary is a one-line description of the layout a preset produces when no
+// page size is saved.
 func (p Preset) Summary() string {
-	size, err := pdfout.LookupPageSize(p.PageSize)
-	label := p.PageSize
+	return p.SummaryFor("")
+}
+
+// SummaryFor is Summary with the page size the user saved as their default.
+func (p Preset) SummaryFor(saved string) string {
+	name := p.PageSizeFor(saved)
+	size, err := pdfout.LookupPageSize(name)
+	label := name
 	if err == nil {
 		label = size.Label
 	}

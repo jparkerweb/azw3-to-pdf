@@ -6,9 +6,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/pdfout"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/messages"
-	"github.com/jparkerweb/azw3-to-pdf/internal/tui/style"
+	"github.com/jparkerweb/ebook-to-pdf/internal/pdfout"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/messages"
+	"github.com/jparkerweb/ebook-to-pdf/internal/tui/style"
 )
 
 // fontChoices are the typefaces offered in the interface. A path can still be
@@ -180,7 +180,7 @@ func (m *LayoutModel) setMargin(mm float64) {
 
 // FooterHint is the key hint line shown while this screen is current.
 func (m LayoutModel) FooterHint() string {
-	return "up/down: setting  |  left/right: change  |  enter: apply  |  esc: cancel"
+	return "up/down: setting  |  left/right: change  |  enter: apply  |  s: save size  |  esc: cancel"
 }
 
 // Bindings lists this screen's help-overlay entries.
@@ -191,6 +191,7 @@ func (m LayoutModel) Bindings() [][2]string {
 		{"space", "Toggle a yes/no setting"},
 		{"enter", "Apply"},
 		{"r", "Reset to the preset"},
+		{"s", "Save page size as default"},
 	}
 }
 
@@ -229,6 +230,9 @@ func (m LayoutModel) Update(msg tea.Msg) (style.ScreenModel, tea.Cmd) {
 		case "r":
 			m.opts = m.original
 			m.SetOptions(m.original)
+		case "s":
+			size := m.opts.PageSize
+			return m, func() tea.Msg { return messages.SaveDefaultPageSizeMsg{Size: size} }
 		case "enter":
 			return m, m.apply()
 		case "esc":

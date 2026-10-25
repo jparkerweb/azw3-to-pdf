@@ -1,6 +1,6 @@
 ---
-name: azw3-to-pdf-update-docs
-description: Audit and update all project documentation (README.md, AGENTS.md, CHANGELOG.md and the local skills) so it matches the current codebase. Use when the user says "update docs", "sync docs", "audit docs", "docs are stale", "refresh documentation", or after significant code changes. Also use when the user types "/azw3-to-pdf-update-docs".
+name: ebook-to-pdf-update-docs
+description: Audit and update all project documentation (README.md, AGENTS.md, CHANGELOG.md and the local skills) so it matches the current codebase. Use when the user says "update docs", "sync docs", "audit docs", "docs are stale", "refresh documentation", or after significant code changes. Also use when the user types "/ebook-to-pdf-update-docs".
 user-invocable: true
 ---
 
@@ -12,7 +12,7 @@ This skill checks every documentation claim against the code that backs it and f
 
 | File | Checked against |
 |------|-----------------|
-| `README.md` | CLI flags, presets table, page sizes, config keys, font behaviour, format support |
+| `README.md` | CLI flags, presets table, page sizes, config keys, font behaviour, the format table |
 | `AGENTS.md` | Package layout, format notes, build and CI commands, the "adding things" recipes |
 | `CHANGELOG.md` | Whether user-visible changes since the last tag are recorded |
 | `.claude/skills/*/SKILL.md` | Commands and file paths the skills tell an agent to use |
@@ -28,6 +28,8 @@ Compare the README's usage examples and flag mentions against `registerRunFlags`
 ### Agent 2: README, presets and page sizes
 
 Compare the README presets table against the `registry` slice in `internal/presets/presets.go`: keys, names, page size, font, size, margins and justification must match `Preset.Summary()`. Compare the page size claims against the `pageSizes` map in `internal/pdfout/options.go`, including the count and the custom measurement suffixes accepted by `parseCustomSize` (`mm`, `in`, `pt`).
+
+Also compare the README's "What it understands" format table against the readers: every `Format` constant in `internal/ebook/open.go` needs a row, every extension in `engine.BookExtensions` (`internal/engine/output.go`) must appear in it, and each row's limits must match the reader file (`epub*.go`, `mobi.go`, `cbz.go`, `fb2.go`, `plaintext.go`, `htmlfile.go`). Check that folder scans skipping `.txt` and `.html` without `--include-text` is still true in `engine.DiscoverBooks`.
 
 ### Agent 3: README, configuration and fonts
 
@@ -55,6 +57,7 @@ Pay extra attention to these, which are the usual culprits:
 
 - **New flags** added to `internal/cli/flags.go` but never added to the README
 - **New presets or page sizes** added to the registry but missing from the README tables
+- **New formats** with a reader in `internal/ebook` but no row in the README's format table, or an extension missing from it
 - **Config keys** renamed in `internal/config/config.go` while the README example keeps the old ones
 - **The Go version** in `go.mod` diverging from the pin in both workflow files
 - **Package descriptions** in AGENTS.md going stale when a file moves between packages

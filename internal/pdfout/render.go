@@ -11,7 +11,7 @@ import (
 
 	"github.com/signintech/gopdf"
 
-	"github.com/jparkerweb/azw3-to-pdf/internal/htmldoc"
+	"github.com/jparkerweb/ebook-to-pdf/internal/htmldoc"
 )
 
 // Meta is the bibliographic information printed on the title page and stored
@@ -27,7 +27,7 @@ type Meta struct {
 // Image is one embedded picture from the source book.
 type Image struct {
 	Data []byte
-	Kind string // "jpeg", "png", "gif" or "bmp"
+	Kind string // "jpeg", "png", "gif", "bmp" or "webp"
 }
 
 // Images resolves a 1-based resource index to a picture. Returning ok=false
@@ -57,6 +57,9 @@ type renderer struct {
 	fonts fontSet
 	imgs  Images
 
+	// pageW and pageH are the size of the current page, which a sized
+	// break or a full-page image can change from opts.PageSize.
+	pageW, pageH  float64
 	left, right   float64
 	top, bottom   float64
 	contentWidth  float64
@@ -65,6 +68,12 @@ type renderer struct {
 	y        float64
 	page     int
 	pageUsed bool
+	// sizedPage is set while the current page is one a sized break opened,
+	// so a full-page image that follows can fill it rather than add another.
+	sizedPage bool
+	// furniturePending holds back a sized page's header and page number
+	// until something other than a full-page image is drawn on it.
+	furniturePending bool
 
 	result Result
 }
@@ -89,8 +98,8 @@ func Render(ctx context.Context, w io.Writer, doc *htmldoc.Doc, meta Meta, image
 		Title:    meta.Title,
 		Author:   meta.Author,
 		Subject:  meta.Subject,
-		Creator:  "azw3-to-pdf",
-		Producer: "azw3-to-pdf",
+		Creator:  "ebook-to-pdf",
+		Producer: "ebook-to-pdf",
 	})
 
 	fonts, err := loadFonts(r.pdf, opts.Font)
@@ -100,12 +109,7 @@ func Render(ctx context.Context, w io.Writer, doc *htmldoc.Doc, meta Meta, image
 	r.fonts = fonts
 	r.result.Font = fonts.Name()
 
-	r.left = opts.Margins.Left
-	r.right = opts.PageSize.Width - opts.Margins.Right
-	r.top = opts.Margins.Top
-	r.bottom = opts.PageSize.Height - opts.Margins.Bottom
-	r.contentWidth = r.right - r.left
-	r.contentHeight = r.bottom - r.top
+	r.setGeometry(opts.PageSize.Width, opts.PageSize.Height)
 
 	if opts.Cover {
 		r.coverPage()

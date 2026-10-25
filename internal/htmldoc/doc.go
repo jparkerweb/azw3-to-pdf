@@ -71,6 +71,14 @@ type Block struct {
 	Scale      float64
 	MarginLeft float64
 	Indent     float64
+
+	// FullPage marks a KindImage that fills a page of its own, with no
+	// margins and no running header or page number (comics, fixed layout).
+	FullPage bool
+
+	// PageWidth and PageHeight, in points, are set only on a KindPageBreak
+	// that starts a page of that size. Zero means the configured page size.
+	PageWidth, PageHeight float64
 }
 
 // Text returns the block's plain text, which the outline and diagnostics use.

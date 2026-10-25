@@ -1,6 +1,7 @@
 package htmldoc
 
 import (
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -95,6 +96,16 @@ func (p *parser) start(t html.Token) {
 			p.emitBreak()
 			return
 		}
+		// Readers for fixed-layout formats mark where a page of a given size
+		// starts. Inside dropped content (an <svg>, say) it is ignored like
+		// everything else there, and it never opens a frame, so it is void.
+		if name == "ebook:page" {
+			if p.skip == 0 {
+				attrs := attrMap(t)
+				p.sizedBreak(pointsAttr(attrs["width"]), pointsAttr(attrs["height"]))
+			}
+			return
+		}
 		name = name[i+1:]
 	}
 
@@ -149,6 +160,13 @@ func (p *parser) start(t html.Token) {
 		// A span the stylesheet promotes to a block, which book designers use
 		// constantly for run-in chapter numbers and subtitles.
 		kind, level, isBlock = KindParagraph, 0, true
+	}
+	if v, ok := attrs["data-ebook-heading"]; ok {
+		// Readers set this on table-of-contents targets so they become
+		// headings (and bookmarks) whatever the book's CSS says.
+		if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil {
+			kind, level, isBlock = KindHeading, min(max(n, 1), 6), true
+		}
 	}
 	if isBlock {
 		p.flush()
@@ -333,6 +351,34 @@ func (p *parser) emitBreak() {
 	p.doc.Blocks = append(p.doc.Blocks, Block{Kind: KindPageBreak})
 }
 
+// sizedBreak starts a page of w x h points. It reuses a break that is already
+// there (an <html> boundary usually precedes the marker) so one page change
+// never becomes two, and unlike emitBreak it fires at the very start of the
+// document, because the first page's size matters too.
+func (p *parser) sizedBreak(w, h float64) {
+	if w <= 0 || h <= 0 {
+		return
+	}
+	p.flush()
+	if n := len(p.doc.Blocks); n > 0 && p.doc.Blocks[n-1].Kind == KindPageBreak {
+		p.doc.Blocks[n-1].PageWidth = w
+		p.doc.Blocks[n-1].PageHeight = h
+		return
+	}
+	p.doc.Blocks = append(p.doc.Blocks, Block{Kind: KindPageBreak, PageWidth: w, PageHeight: h})
+}
+
+// pointsAttr reads a size attribute as points; anything unparsable is 0.
+// ParseFloat also accepts "inf" and "NaN", which would reach the PDF as a
+// page of no real size, so those count as unparsable too.
+func pointsAttr(v string) float64 {
+	f, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
+	if err != nil || math.IsNaN(f) || math.IsInf(f, 0) {
+		return 0
+	}
+	return f
+}
+
 func (p *parser) image(attrs map[string]string) {
 	idx := resourceIndex(attrs)
 	if idx <= 0 {
@@ -344,6 +390,7 @@ func (p *parser) image(attrs map[string]string) {
 		Resource: idx,
 		Alt:      attrs["alt"],
 		Align:    AlignCenter,
+		FullPage: hasAttr(attrs, "data-ebook-fullpage"),
 	})
 }
 
@@ -440,7 +487,7 @@ func isInternalLink(href string) bool {
 func isVoid(name string) bool {
 	switch name {
 	case "br", "hr", "img", "image", "meta", "link", "input", "area", "base",
-		"col", "embed", "param", "source", "track", "wbr":
+		"col", "embed", "param", "source", "track", "wbr", "ebook:page":
 		return true
 	}
 	return false
@@ -452,6 +499,11 @@ func attrMap(t html.Token) map[string]string {
 		m[strings.ToLower(a.Key)] = a.Val
 	}
 	return m
+}
+
+func hasAttr(attrs map[string]string, key string) bool {
+	_, ok := attrs[key]
+	return ok
 }
 
 func lastText(spans []Span) string {
